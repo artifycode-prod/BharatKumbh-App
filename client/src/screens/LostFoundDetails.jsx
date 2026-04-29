@@ -1,17 +1,19 @@
 import React from 'react';
 import { Image, ScrollView, Text, TouchableOpacity, View, Linking, Alert } from 'react-native';
 import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
 import { styles } from '../styles/styles';
 
 export const LostFoundDetails = ({route, navigation}) => {
+  const { t } = useLanguage();
   const item = route?.params?.item;
 
   if (!item) {
     return (
       <ScrollView contentContainerStyle={styles.screenPad}>
-        <Header title="Report Details" icon="🔍" onBack={() => navigation.goBack()} />
+        <Header title={t('reportDetails')} icon="🔍" onBack={() => navigation.goBack()} />
         <View style={styles.card}>
-          <Text style={styles.rowSubtitle}>No report data available</Text>
+          <Text style={styles.rowSubtitle}>{t('noReportData')}</Text>
         </View>
       </ScrollView>
     );
@@ -34,7 +36,7 @@ export const LostFoundDetails = ({route, navigation}) => {
   };
 
   const formatRelativeTime = (dateString) => {
-    if (!dateString) return 'Recently';
+    if (!dateString) return t('recently');
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -42,11 +44,11 @@ export const LostFoundDetails = ({route, navigation}) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minutes ago`;
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffMins < 1) return t('justNow');
+    if (diffMins < 60) return `${diffMins} ${t('minutesAgo')}`;
+    if (diffHours < 24) return `${diffHours} ${t('hoursAgo')}`;
+    if (diffDays === 1) return t('yesterday');
+    if (diffDays < 7) return `${diffDays} ${t('daysAgo')}`;
     return formatDate(dateString);
   };
 
@@ -63,22 +65,22 @@ export const LostFoundDetails = ({route, navigation}) => {
 
   const handleCall = (phone) => {
     if (!phone) {
-      Alert.alert('No Phone Number', 'Contact phone number is not available');
+      Alert.alert(t('noPhoneNumber'), t('contactNotAvailable'));
       return;
     }
     Linking.openURL(`tel:${phone}`).catch(err => {
-      Alert.alert('Error', 'Unable to make phone call');
+      Alert.alert(t('error'), t('unableToCall'));
       console.error('Call error:', err);
     });
   };
 
   const handleSMS = (phone) => {
     if (!phone) {
-      Alert.alert('No Phone Number', 'Contact phone number is not available');
+      Alert.alert(t('noPhoneNumber'), t('contactNotAvailable'));
       return;
     }
     Linking.openURL(`sms:${phone}`).catch(err => {
-      Alert.alert('Error', 'Unable to send SMS');
+      Alert.alert(t('error'), t('unableToSendSMS'));
       console.error('SMS error:', err);
     });
   };
@@ -111,7 +113,7 @@ export const LostFoundDetails = ({route, navigation}) => {
 
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="Report Details" icon="🔍" onBack={() => navigation.goBack()} />
+      <Header title={t('reportDetails')} icon="🔍" onBack={() => navigation.goBack()} />
       
       {/* Item Type Badge */}
       <View style={styles.card}>
@@ -121,10 +123,10 @@ export const LostFoundDetails = ({route, navigation}) => {
           </View>
           <View style={{flex: 1, marginLeft: 12}}>
             <Text style={[styles.sectionTitle, {marginBottom: 4}]}>
-              {item.type === 'lost' ? 'Lost Item' : 'Found Item'}
+              {item.type === 'lost' ? t('lostItem') : t('foundItem')}
             </Text>
             <Text style={[styles.rowSubtitle, {fontSize: 12, color: item.type === 'lost' ? '#F59E0B' : '#10B981'}]}>
-              Status: {item.status || 'open'} • {formatRelativeTime(item.createdAt || item.created_at)}
+              {t('status')}: {item.status || 'open'} • {formatRelativeTime(item.createdAt || item.created_at)}
             </Text>
           </View>
         </View>
@@ -132,24 +134,24 @@ export const LostFoundDetails = ({route, navigation}) => {
 
       {/* Item Information */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Item Information</Text>
+        <Text style={styles.sectionTitle}>{t('itemInformation')}</Text>
         
         <View style={styles.kvRow}>
-          <Text style={styles.kvLabelDark}>Item Name:</Text>
+          <Text style={styles.kvLabelDark}>{t('itemName')}:</Text>
           <Text style={styles.kvValueDark}>{item.itemName || 'N/A'}</Text>
         </View>
         
         {item.description && (
           <View style={styles.kvRow}>
-            <Text style={styles.kvLabelDark}>Description:</Text>
+            <Text style={styles.kvLabelDark}>{t('description')}:</Text>
             <Text style={styles.kvValueDark}>{item.description}</Text>
           </View>
         )}
 
         {item.isPerson && (
           <View style={styles.kvRow}>
-            <Text style={styles.kvLabelDark}>Type:</Text>
-            <Text style={styles.kvValueDark}>Person</Text>
+            <Text style={styles.kvLabelDark}>{t('type')}:</Text>
+            <Text style={styles.kvValueDark}>{t('person')}</Text>
           </View>
         )}
       </View>
@@ -157,17 +159,17 @@ export const LostFoundDetails = ({route, navigation}) => {
       {/* Location Information */}
       {item.location && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionTitle}>{t('location')}</Text>
           
           {item.location.address && (
             <View style={styles.kvRow}>
-              <Text style={styles.kvLabelDark}>Address:</Text>
+              <Text style={styles.kvLabelDark}>{t('address')}:</Text>
               <Text style={styles.kvValueDark}>{item.location.address}</Text>
             </View>
           )}
           
           <View style={styles.kvRow}>
-            <Text style={styles.kvLabelDark}>Coordinates:</Text>
+            <Text style={styles.kvLabelDark}>{t('coordinates')}:</Text>
             <Text style={[styles.kvValueDark, {fontSize: 12}]}>
               {item.location.latitude?.toFixed(6)}, {item.location.longitude?.toFixed(6)}
             </Text>
@@ -178,24 +180,24 @@ export const LostFoundDetails = ({route, navigation}) => {
       {/* Contact Information */}
       {item.contactInfo && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
+          <Text style={styles.sectionTitle}>{t('contactInformation')}</Text>
           
           {item.contactInfo.phone && (
             <View style={styles.kvRow}>
-              <Text style={styles.kvLabelDark}>Phone:</Text>
+              <Text style={styles.kvLabelDark}>{t('phone')}:</Text>
               <View style={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
                 <Text style={styles.kvValueDark}>{item.contactInfo.phone}</Text>
                 <TouchableOpacity
                   onPress={() => handleCall(item.contactInfo.phone)}
                   style={[styles.smallBtn, {backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 6}]}
                 >
-                  <Text style={styles.smallBtnText}>📞 Call</Text>
+                  <Text style={styles.smallBtnText}>📞 {t('call')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => handleSMS(item.contactInfo.phone)}
                   style={[styles.smallBtn, {backgroundColor: '#3B82F6', paddingHorizontal: 12, paddingVertical: 6}]}
                 >
-                  <Text style={styles.smallBtnText}>💬 SMS</Text>
+                  <Text style={styles.smallBtnText}>💬 {t('sendSMS')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -203,7 +205,7 @@ export const LostFoundDetails = ({route, navigation}) => {
           
           {item.contactInfo.email && (
             <View style={styles.kvRow}>
-              <Text style={styles.kvLabelDark}>Email:</Text>
+              <Text style={styles.kvLabelDark}>{t('email')}:</Text>
               <Text style={styles.kvValueDark}>{item.contactInfo.email}</Text>
             </View>
           )}
@@ -213,7 +215,7 @@ export const LostFoundDetails = ({route, navigation}) => {
       {/* Images */}
       {hasImages && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Photos ({images.length})</Text>
+          <Text style={styles.sectionTitle}>{t('photos')} ({images.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 12}}>
             {images.map((imageUri, index) => {
               const imageSource = getImageSource(imageUri);
@@ -241,27 +243,27 @@ export const LostFoundDetails = ({route, navigation}) => {
 
       {/* Report Information */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Report Information</Text>
+        <Text style={styles.sectionTitle}>{t('reportInformation')}</Text>
         
         <View style={styles.kvRow}>
-          <Text style={styles.kvLabelDark}>Reported On:</Text>
+          <Text style={styles.kvLabelDark}>{t('reportedOn')}:</Text>
           <Text style={styles.kvValueDark}>{formatDate(item.createdAt || item.created_at)}</Text>
         </View>
         
         {item.reportedBy && (
           <View style={styles.kvRow}>
-            <Text style={styles.kvLabelDark}>Reported By:</Text>
+            <Text style={styles.kvLabelDark}>{t('reportedBy')}:</Text>
             <Text style={styles.kvValueDark}>
               {typeof item.reportedBy === 'object' 
-                ? (item.reportedBy.name || item.reportedBy.email || 'User')
-                : 'User'}
+                ? (item.reportedBy.name || item.reportedBy.email || t('user'))
+                : t('user')}
             </Text>
           </View>
         )}
 
         {item.status && (
           <View style={styles.kvRow}>
-            <Text style={styles.kvLabelDark}>Status:</Text>
+            <Text style={styles.kvLabelDark}>{t('status')}:</Text>
             <Text style={[styles.kvValueDark, {
               color: item.status === 'matched' ? '#10B981' : 
                      item.status === 'resolved' ? '#3B82F6' : 

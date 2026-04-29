@@ -9,7 +9,7 @@ import api from './api';
  * Get volunteer dashboard data
  */
 export const getVolunteerDashboard = async () => {
-  const response = await api.get('/api/volunteer/dashboard');
+  const response = await api.get('/volunteer/dashboard');
   return response.data.dashboard;
 };
 
@@ -17,7 +17,7 @@ export const getVolunteerDashboard = async () => {
  * Get assigned tasks
  */
 export const getAssignedTasks = async () => {
-  const response = await api.get('/api/volunteer/assigned-tasks');
+  const response = await api.get('/volunteer/assigned-tasks');
   return response.data.tasks;
 };
 

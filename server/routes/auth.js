@@ -8,26 +8,17 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Test endpoint to verify demo logins and server version
+// Test endpoint - seeded dummy users (run db:seed to create)
 router.get('/test-demo-logins', (req, res) => {
-  const demoLogins = {
-    'admin@kumbh.com': { password: 'admin', role: 'admin', name: 'Admin User' },
-    'admin': { password: 'admin', role: 'admin', name: 'Admin User' },
-    'volunteer@kumbh.com': { password: 'volunteer', role: 'volunteer', name: 'Volunteer User' },
-    'volunteer': { password: 'volunteer', role: 'volunteer', name: 'Volunteer User' },
-    'medical@kumbh.com': { password: 'medical', role: 'medical', name: 'Medical Team User' },
-    'medical': { password: 'medical', role: 'medical', name: 'Medical Team User' },
-    'pilgrim@kumbh.com': { password: 'pilgrim123', role: 'pilgrim', name: 'Pilgrim User' }
-  };
   res.json({
     success: true,
-    message: 'Demo logins available - Server code version: 2.0',
+    message: 'Dummy users seeded in DB - run npm run db:seed if missing',
     serverTime: new Date().toISOString(),
-    demoLogins: Object.keys(demoLogins).map(key => ({
-      email: key,
-      password: demoLogins[key].password,
-      role: demoLogins[key].role
-    }))
+    dummyUsers: [
+      { email: 'admin@kumbh.com', password: 'admin', role: 'admin' },
+      { email: 'volunteer@kumbh.com', password: 'volunteer', role: 'volunteer' },
+      { email: 'medical@kumbh.com', password: 'medical', role: 'medical' }
+    ]
   });
 });
 
@@ -39,7 +30,7 @@ router.post('/register', /* authLimiter, */ [
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('phone').trim().notEmpty().withMessage('Phone number is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['pilgrim', 'volunteer', 'admin', 'medical']).withMessage('Invalid role')
+  body('role').optional().isIn(['pilgrim']).withMessage('Registration is for pilgrims only')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -50,10 +41,11 @@ router.post('/register', /* authLimiter, */ [
       });
     }
 
-    const { name, email, phone, password, role } = req.body;
+    const { name, email, phone, password } = req.body;
+    const role = 'pilgrim'; // Only pilgrims can sign up; admin/volunteer/medical are pre-seeded
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -61,23 +53,23 @@ router.post('/register', /* authLimiter, */ [
       });
     }
 
-    // Create user
+    // Create user (pilgrim only - others are pre-seeded)
     const user = await User.create({
       name,
       email,
       phone,
       password,
-      role: role || 'pilgrim'
+      role
     });
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id || user._id);
 
     res.status(201).json({
       success: true,
       token,
       user: {
-        id: user._id,
+        id: user.id || user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -93,11 +85,19 @@ router.post('/register', /* authLimiter, */ [
   }
 });
 
+// GET /api/auth/login - Helpful response when accessed via browser (use POST for login)
+router.get('/login', (req, res) => {
+  res.status(405).json({
+    success: false,
+    message: 'Use POST method for login. Send { email, password } in JSON body.',
+    hint: 'POST /api/auth/login with Content-Type: application/json'
+  });
+});
+
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user (by email or user id + password)
 // @access  Public
 router.post('/login', /* authLimiter, */ [
-  body('email').notEmpty().withMessage('Email or username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
   try {
@@ -109,105 +109,22 @@ router.post('/login', /* authLimiter, */ [
       });
     }
 
-    const { email, password } = req.body;
-    
-    // Log immediately to verify request is received
-    console.log('========================================');
-    console.log('📥 LOGIN REQUEST RECEIVED');
-    console.log('📥 Raw request body:', JSON.stringify({ email, passwordType: typeof password, passwordLength: password?.length }));
-    console.log('📥 Full req.body:', JSON.stringify(req.body));
-    console.log('========================================');
-
-    // Demo login credentials (for development/testing)
-    // Keep these logins same and refer to user role
-    const demoLogins = {
-      'admin@kumbh.com': { password: 'admin', role: 'admin', name: 'Admin User' },
-      'admin': { password: 'admin', role: 'admin', name: 'Admin User' },
-      'volunteer@kumbh.com': { password: 'volunteer', role: 'volunteer', name: 'Volunteer User' },
-      'volunteer': { password: 'volunteer', role: 'volunteer', name: 'Volunteer User' },
-      'medical@kumbh.com': { password: 'medical', role: 'medical', name: 'Medical Team User' },
-      'medical': { password: 'medical', role: 'medical', name: 'Medical Team User' },
-      'pilgrim@kumbh.com': { password: 'pilgrim123', role: 'pilgrim', name: 'Pilgrim User' }
-    };
-
-    // Check if it's a demo login
-    const normalizedEmail = (email || '').toLowerCase().trim();
-    const normalizedPassword = String(password || '').trim();
-    
-    console.log('🔐 Login attempt:', JSON.stringify({ 
-      originalEmail: email, 
-      normalizedEmail, 
-      originalPassword: password,
-      normalizedPassword,
-      passwordLength: normalizedPassword.length
-    }));
-    
-    // Check demo logins FIRST - before any database lookup
-    const demoLogin = demoLogins[normalizedEmail];
-    
-    console.log('📋 Demo login check:', { 
-      normalizedEmail,
-      found: !!demoLogin, 
-      expectedPassword: demoLogin?.password,
-      receivedPassword: normalizedPassword,
-      passwordMatch: demoLogin?.password === normalizedPassword,
-      expectedLength: demoLogin?.password?.length,
-      receivedLength: normalizedPassword.length,
-      allDemoKeys: Object.keys(demoLogins)
-    });
-    
-    // DEMO LOGIN CHECK - ALWAYS RUNS FIRST
-    // This is the primary authentication method for development
-    if (demoLogin) {
-      // Demo login found - check password
-      const passwordMatches = demoLogin.password === normalizedPassword;
-      
-      console.log('🔑 DEMO LOGIN CHECK:');
-      console.log('   Email:', normalizedEmail, '✅ Found in demo logins');
-      console.log('   Expected password:', `"${demoLogin.password}"`, `(type: ${typeof demoLogin.password}, length: ${demoLogin.password.length})`);
-      console.log('   Received password:', `"${normalizedPassword}"`, `(type: ${typeof normalizedPassword}, length: ${normalizedPassword.length})`);
-      console.log('   Password match:', passwordMatches ? '✅ YES' : '❌ NO');
-      
-      if (passwordMatches) {
-        // SUCCESS - Generate token and return
-        console.log('✅✅✅ DEMO LOGIN SUCCESSFUL!');
-        const demoUserId = `demo-${demoLogin.role}`;
-        const token = generateToken(demoUserId);
-
-        const response = {
-          success: true,
-          token,
-          user: {
-            id: demoUserId,
-            name: demoLogin.name,
-            email: normalizedEmail.includes('@') ? normalizedEmail : `${normalizedEmail}@kumbh.com`,
-            phone: '0000000000',
-            role: demoLogin.role
-          }
-        };
-        
-        console.log('✅ Returning success response');
-        return res.json(response);
-      } else {
-        // Password mismatch
-        console.log('❌❌❌ PASSWORD MISMATCH');
-        return res.status(401).json({
-          success: false,
-          message: `Invalid password. Expected: "${demoLogin.password}", Received: "${normalizedPassword}"`
-        });
-      }
+    const { email, id, password } = req.body;
+    const identifier = (id || email || '').toString().trim();
+    if (!identifier) {
+      return res.status(400).json({ success: false, message: 'Email or user ID is required' });
     }
-    
-    // If we reach here, no demo login was found
-    console.log('⚠️⚠️⚠️ NO DEMO LOGIN FOUND');
-    console.log('   Requested email:', normalizedEmail);
-    console.log('   Available demo emails:', Object.keys(demoLogins).join(', '));
-    console.log('   Falling back to database lookup...');
 
-    // Regular database login
-    // Find user and include password for comparison
-    console.log('🔍 Trying database lookup for:', normalizedEmail);
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    let user;
+    const roleMap = { admin: 'admin@kumbh.com', volunteer: 'volunteer@kumbh.com', medical: 'medical@kumbh.com' };
+    if (identifier.includes('@')) {
+      const normalizedEmail = identifier.toLowerCase();
+      user = await User.findOneWithPassword({ email: normalizedEmail });
+    } else if (roleMap[identifier]) {
+      user = await User.findOneWithPassword({ email: roleMap[identifier] });
+    } else {
+      user = await User.findOneWithPassword({ id: identifier });
+    }
     
     if (!user) {
       console.log('❌ User not found in database');
@@ -235,18 +152,14 @@ router.post('/login', /* authLimiter, */ [
     }
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id || user._id);
 
+    // Return full user from database (exclude password)
+    const { password: _pwd, comparePassword: _cmp, ...userForResponse } = user;
     res.json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role
-      }
+      user: userForResponse
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -294,15 +207,11 @@ router.put('/update-location', protect, [
 
     const { latitude, longitude } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      {
-        'location.latitude': latitude,
-        'location.longitude': longitude,
-        'location.lastUpdated': new Date()
-      },
-      { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.user.id, {
+      'location.latitude': latitude,
+      'location.longitude': longitude,
+      'location.lastUpdated': new Date()
+    });
 
     res.json({
       success: true,

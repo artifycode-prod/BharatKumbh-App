@@ -1,87 +1,21 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+// User model - PostgreSQL backend
+const db = require('../db/users');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Please provide a name'],
-    trim: true
-  },
-  email: {
-    type: String,
-    required: [true, 'Please provide an email'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
-  },
-  phone: {
-    type: String,
-    required: [true, 'Please provide a phone number'],
-    trim: true
-  },
-  password: {
-    type: String,
-    required: [true, 'Please provide a password'],
-    minlength: 6,
-    select: false // Don't return password by default
-  },
-  role: {
-    type: String,
-    enum: ['pilgrim', 'volunteer', 'admin', 'medical'],
-    default: 'pilgrim'
-  },
-  location: {
-    latitude: {
-      type: Number,
-      default: null
-    },
-    longitude: {
-      type: Number,
-      default: null
-    },
-    lastUpdated: {
-      type: Date,
-      default: null
-    }
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+// Wrapper to match Mongoose-style API for compatibility
+const User = {
+  findById: async (id) => db.findById(id),
+  findOne: async (filter) => db.findOne(filter),
+  find: async (filter) => db.find(filter),
+  create: async (data) => db.create(data),
+  countDocuments: async (filter) => db.countDocuments(filter),
+  findByIdAndUpdate: async (id, updates) => db.findByIdAndUpdate(id, updates),
 };
 
-// Method to remove password from JSON output
-userSchema.methods.toJSON = function() {
-  const obj = this.toObject();
-  delete obj.password;
-  return obj;
+// For login - need user with password (by email or id)
+User.findOneWithPassword = async (filter) => {
+  if (filter.email) return db.findByEmailWithPassword(filter.email);
+  if (filter.id || filter._id) return db.findByIdWithPassword(filter.id || filter._id);
+  return null;
 };
 
-module.exports = mongoose.model('User', userSchema);
-
+module.exports = User;

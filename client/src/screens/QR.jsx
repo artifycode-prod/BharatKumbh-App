@@ -5,10 +5,11 @@ import { RNCamera } from 'react-native-camera';
 import { launchCamera } from 'react-native-image-picker';
 import Modal from 'react-native-modal';
 import QRCodeScanner from 'react-native-qrcode-scanner';
-import { Header } from '../components/Header';
 import { registerQR } from '../services/qrService';
 import { styles } from '../styles/styles';
 import { getCurrentPosition } from '../utils/location';
+
+const VALID_QR_ID = 'Kumbhbharat Registration';
 
 const DESTINATIONS = ['Tapovan', 'Panchvati', 'Trambak', 'Ramkund', 'Kalaram', 'Sita Gufa', 'Other'];
 const ENTRY_POINTS = [
@@ -34,6 +35,23 @@ export const QR = ({goHome}) => {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualQrCode, setManualQrCode] = useState('');
 
+  const handleGroupSizeChange = useCallback((text) => {
+    setGroupSize(text.replace(/\D/g, '').slice(0, 2));
+  }, []);
+
+  const handleLuggageChange = useCallback((text) => {
+    setLuggageCount(text.replace(/\D/g, '').slice(0, 2));
+  }, []);
+
+  const handleContactPhoneChange = useCallback((text) => {
+    const digits = text.replace(/\D/g, '').slice(0, 10);
+    setContactPhone(digits);
+  }, []);
+
+  const handleContactNameChange = useCallback((text) => {
+    setContactName(text.replace(/[^a-zA-Z\s]/g, ''));
+  }, []);
+
   const onScanOnce = useCallback(() => {
     setShowScanner(true);
   }, []);
@@ -42,32 +60,37 @@ export const QR = ({goHome}) => {
     setShowScanner(true);
   }, []);
 
+  const isValidQRCode = useCallback((data) => {
+    const trimmed = (data || '').trim();
+    if (trimmed === VALID_QR_ID) return true;
+    try {
+      const parsed = JSON.parse(data);
+      return parsed?.id === VALID_QR_ID || parsed?.qrCodeId === VALID_QR_ID;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const onScanSuccess = useCallback((e) => {
-    console.log('onScanSuccess called with:', e);
     const data = e?.data ? String(e.data) : '';
-    
-    if (!data) {
-      console.warn('No data in QR scan result');
+    if (!data) return;
+
+    if (!isValidQRCode(data)) {
+      Alert.alert('Invalid QR Code', 'Only Bharat Kumbh registration QR codes are accepted. Please scan a valid registration QR code.');
       return;
     }
-    
-    // Close scanner first
+
     setShowScanner(false);
-    
-    // Accept any QR code - use the scanned data as QR Code ID
-    setQrCodeId(data);
-    
-    // Try to parse QR data if it's JSON format
+    setQrCodeId(data.trim());
     try {
       const parsed = JSON.parse(data);
       if (parsed.entryPoint) setEntryPoint(parsed.entryPoint);
       if (parsed.entryPointName) setEntryPointName(parsed.entryPointName);
       Alert.alert('QR Scanned Successfully', `Entry Point: ${parsed.entryPointName || parsed.entryPoint || 'Detected'}`);
     } catch {
-      // If not JSON, use as QR code ID (any QR code works)
-      Alert.alert('QR Scanned Successfully', `QR Code ID: ${data.substring(0, 50)}${data.length > 50 ? '...' : ''}`);
+      Alert.alert('QR Scanned Successfully', 'Bharat Kumbh registration QR code scanned.');
     }
-  }, []);
+  }, [isValidQRCode]);
 
   const openSelfieCamera = useCallback(async () => {
     const res = await launchCamera({
@@ -97,16 +120,23 @@ export const QR = ({goHome}) => {
       Alert.alert('Selfie Required', 'Please take a group selfie');
       return;
     }
-    if (!groupSize || parseInt(groupSize) < 1) {
+    const gs = parseInt(groupSize, 10);
+    if (!groupSize || isNaN(gs) || gs < 1 || gs > 50) {
       Alert.alert('Invalid Group Size', 'Please enter a valid group size (1-50)');
       return;
     }
-    if (!luggageCount || parseInt(luggageCount) < 0) {
-      Alert.alert('Invalid Luggage Count', 'Please enter a valid luggage count');
+    const lc = parseInt(luggageCount, 10);
+    if (!luggageCount || isNaN(lc) || lc < 1 || lc > 20) {
+      Alert.alert('Invalid Luggage Count', 'Please enter a valid luggage count (1-20)');
       return;
     }
-    if (!contactPhone.trim()) {
-      Alert.alert('Contact Required', 'Please enter a contact phone number');
+    const phoneTrimmed = contactPhone.trim().replace(/\D/g, '');
+    if (phoneTrimmed.length !== 10) {
+      Alert.alert('Invalid Phone Number', 'Please enter a valid 10-digit contact number');
+      return;
+    }
+    if (contactName.trim() && !/^[a-zA-Z\s]+$/.test(contactName.trim())) {
+      Alert.alert('Invalid Contact Name', 'Contact name can only contain letters');
       return;
     }
     if (intendedDestination === 'Other' && !customDestination.trim()) {
@@ -129,17 +159,17 @@ export const QR = ({goHome}) => {
         await registerQR({
           qrCodeId: qrCodeId.trim(),
           entryPoint,
-          entryPointName: entryPointName || ENTRY_POINTS.find(ep => ep.value === entryPoint)?.label || 'Entry Point',
-          groupSize: parseInt(groupSize),
-          luggageCount: parseInt(luggageCount),
+          entryPointName: (entryPointName || '').trim() || ENTRY_POINTS.find(ep => ep.value === entryPoint)?.label || 'Entry Point',
+          groupSize: parseInt(groupSize, 10) || 1,
+          luggageCount: parseInt(luggageCount, 10) || 0,
           intendedDestination,
           customDestination: intendedDestination === 'Other' ? customDestination : undefined,
           groupSelfie: selfieBase64,
           latitude: location.latitude,
           longitude: location.longitude,
           contactInfo: {
-            phone: contactPhone.trim(),
-            name: contactName.trim() || undefined
+            phone: phoneTrimmed,
+            name: (contactName || '').trim() || ''
           }
         });
 
@@ -149,17 +179,18 @@ export const QR = ({goHome}) => {
       } catch (error) {
         console.error('Registration error:', error);
         let errorMessage = 'Failed to submit registration';
-        
-        if (error.message) {
+        const data = error?.response?.data;
+        if (data?.message) {
+          errorMessage = data.message;
+        } else if (error?.message) {
           errorMessage = error.message;
-        } else if (error.response) {
-          // Server responded with error
-          errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
-        } else if (error.request) {
-          // Request made but no response
-          errorMessage = 'Cannot connect to server. Please check:\n1. Backend server is running\n2. Correct API URL in config\n3. Network connection';
+        } else if (data?.errors?.length) {
+          errorMessage = data.errors.map(e => e.msg).join('; ');
+        } else if (error?.response) {
+          errorMessage = `Server error: ${error.response.status}`;
+        } else if (error?.request) {
+          errorMessage = 'Cannot connect to server. Check backend and network.';
         }
-        
         Alert.alert('Registration Failed', errorMessage);
       } finally {
         setLoading(false);
@@ -173,12 +204,11 @@ export const QR = ({goHome}) => {
 
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="QR Registration" icon="📱" onBack={goHome} />
       
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Scan QR Code</Text>
         <Text style={[styles.smallMutedCenter, {marginBottom: 12, fontSize: 12}]}>
-          Scan any QR code at entry points (Railway Station, Bus Stand, Parking Area)
+          Scan Bharat Kumbh registration QR code only at entry points (Railway Station, Bus Stand, Parking Area)
         </Text>
         <View style={{flexDirection: 'row', gap: 8}}>
           <TouchableOpacity onPress={onScanOnce} style={[styles.primaryBtn, {flex: 1}]}> 
@@ -269,7 +299,7 @@ export const QR = ({goHome}) => {
               placeholderTextColor="#9A3412"
               style={{height: 44, color: '#7C2D12'}}
               value={groupSize}
-              onChangeText={setGroupSize}
+              onChangeText={handleGroupSizeChange}
               keyboardType="number-pad"
             />
           </View>
@@ -278,11 +308,11 @@ export const QR = ({goHome}) => {
           <Text style={styles.fieldLabel}>Luggage Count</Text>
           <View style={styles.fieldInput}>
             <TextInput
-              placeholder="Bags Limit (0-20)"
+              placeholder="Bags Limit (1-20)"
               placeholderTextColor="#9A3412"
               style={{height: 44, color: '#7C2D12'}}
               value={luggageCount}
-              onChangeText={setLuggageCount}
+              onChangeText={handleLuggageChange}
               keyboardType="number-pad"
             />
           </View>
@@ -323,12 +353,13 @@ export const QR = ({goHome}) => {
           <Text style={styles.fieldLabel}>Phone Number *</Text>
           <View style={styles.fieldInput}>
             <TextInput
-              placeholder="Enter phone number"
+              placeholder="10-digit phone number"
               placeholderTextColor="#9A3412"
               style={{height: 44, color: '#7C2D12'}}
               value={contactPhone}
-              onChangeText={setContactPhone}
+              onChangeText={handleContactPhoneChange}
               keyboardType="phone-pad"
+              maxLength={10}
             />
           </View>
         </View>
@@ -417,7 +448,7 @@ export const QR = ({goHome}) => {
             }
             topContent={
               <View style={{paddingTop: 60, paddingBottom: 20, backgroundColor: 'transparent'}}>
-                <Text style={{color: 'white', textAlign: 'center', fontSize: 18, marginBottom: 8, fontWeight: '600'}}>Scan Any QR Code</Text>
+                <Text style={{color: 'white', textAlign: 'center', fontSize: 18, marginBottom: 8, fontWeight: '600'}}>Scan Bharat Kumbh Registration QR Code</Text>
                 <Text style={{color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontSize: 14}}>Align the QR code within the frame</Text>
               </View>
             }

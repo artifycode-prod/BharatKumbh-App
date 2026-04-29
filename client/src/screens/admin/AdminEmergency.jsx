@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { getAllSOS } from '../../services/sosService';
 import { styles } from '../../styles/styles';
 
 export const AdminEmergency = ({goHome, navigation}) => {
+  const { t } = useLanguage();
   const [emergencies, setEmergencies] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ export const AdminEmergency = ({goHome, navigation}) => {
       setEmergencies(sosAlerts);
     } catch (error) {
       console.error('Error loading emergencies:', error);
-      Alert.alert('Error', 'Failed to load emergencies');
+      Alert.alert(t('error'), t('failedToLoadEmergencies'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -49,34 +51,34 @@ export const AdminEmergency = ({goHome, navigation}) => {
       contentContainerStyle={styles.screenPad}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadEmergencies} />}
     >
-      <Header title="Emergency" icon="🚨" onBack={goHome} />
+      <Header title={t('emergency')} icon="🚨" onBack={goHome} />
       
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Filter Emergencies</Text>
+        <Text style={styles.sectionTitle}>{t('filterEmergencies')}</Text>
         <View style={styles.chipsRow}>
           <TouchableOpacity 
             onPress={() => setFilter('all')}
             style={[styles.chip, filter === 'all' && styles.chipActive]}
           >
-            <Text style={[styles.chipText, filter === 'all' && styles.chipTextActive]}>All</Text>
+            <Text style={[styles.chipText, filter === 'all' && styles.chipTextActive]}>{t('filterAll')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => setFilter('pending')}
             style={[styles.chip, filter === 'pending' && styles.chipActive]}
           >
-            <Text style={[styles.chipText, filter === 'pending' && styles.chipTextActive]}>Pending</Text>
+            <Text style={[styles.chipText, filter === 'pending' && styles.chipTextActive]}>{t('filterPending')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => setFilter('critical')}
             style={[styles.chip, filter === 'critical' && styles.chipActive]}
           >
-            <Text style={[styles.chipText, filter === 'critical' && styles.chipTextActive]}>Critical</Text>
+            <Text style={[styles.chipText, filter === 'critical' && styles.chipTextActive]}>{t('filterCritical')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={() => setFilter('high')}
             style={[styles.chip, filter === 'high' && styles.chipActive]}
           >
-            <Text style={[styles.chipText, filter === 'high' && styles.chipTextActive]}>High</Text>
+            <Text style={[styles.chipText, filter === 'high' && styles.chipTextActive]}>{t('filterHigh')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -85,14 +87,14 @@ export const AdminEmergency = ({goHome, navigation}) => {
         <View style={styles.card}>
           <View style={{padding: 20, alignItems: 'center'}}>
             <ActivityIndicator size="large" color="#FB923C" />
-            <Text style={[styles.rowSubtitle, {marginTop: 12}]}>Loading emergencies...</Text>
+            <Text style={[styles.rowSubtitle, {marginTop: 12}]}>{t('loading')}</Text>
           </View>
         </View>
       ) : filteredEmergencies.length === 0 ? (
         <View style={styles.card}>
           <View style={{padding: 20, alignItems: 'center'}}>
             <Text style={[styles.round64Text, {fontSize: 48, marginBottom: 12}]}>🚨</Text>
-            <Text style={[styles.rowSubtitle, {textAlign: 'center'}]}>No emergencies found</Text>
+            <Text style={[styles.rowSubtitle, {textAlign: 'center'}]}>{t('noEmergencies')}</Text>
           </View>
         </View>
       ) : (
@@ -103,7 +105,7 @@ export const AdminEmergency = ({goHome, navigation}) => {
               if (navigation && navigation.navigate) {
                 navigation.navigate('EmergencyDetails', { emergency });
               } else {
-                Alert.alert('Navigation', 'Navigation not available');
+                Alert.alert(t('navigation'), t('navigationNotAvailable'));
               }
             }}
             activeOpacity={0.7}

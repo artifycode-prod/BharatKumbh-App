@@ -1,55 +1,17 @@
-const mongoose = require('mongoose');
+// SOS model - PostgreSQL backend
+const db = require('../db/sos');
 
-const sosSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: false // Made optional for development
-  },
-  location: {
-    latitude: {
-      type: Number,
-      required: true
-    },
-    longitude: {
-      type: Number,
-      required: true
-    },
-    address: {
-      type: String,
-      default: ''
-    }
-  },
-  message: {
-    type: String,
-    default: ''
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'acknowledged', 'resolved', 'cancelled'],
-    default: 'pending'
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'critical'],
-    default: 'high'
-  },
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
-  resolvedAt: {
-    type: Date,
-    default: null
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
+const SOS = {
+  create: async (data) => db.create(data),
+  findById: async (id) => db.findById(id),
+  find: async (filter) => db.find(filter),
+  countDocuments: async (filter) => db.countDocuments(filter),
+};
 
-module.exports = mongoose.model('SOS', sosSchema);
+// For updates
+SOS.findByIdAndUpdate = async (id, updates) => {
+  await db.update(id, updates);
+  return db.findById(id);
+};
 
+module.exports = SOS;

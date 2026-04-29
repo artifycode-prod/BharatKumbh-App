@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getAllRegistrations } from '../../services/qrService';
 
 export const AdminRegistrations = ({goHome, navigation}) => {
+  const { t } = useLanguage();
   const [registrations, setRegistrations] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export const AdminRegistrations = ({goHome, navigation}) => {
       setPage(pageNum);
     } catch (error) {
       console.error('Error loading registrations:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to load registrations');
+      Alert.alert(t('error'), error.response?.data?.message || t('failedToLoadRegistrations'));
       if (reset) {
         setRegistrations([]);
       }
@@ -89,11 +91,11 @@ export const AdminRegistrations = ({goHome, navigation}) => {
         loadMore();
       }}
     >
-      <Header title="QR Registrations" icon="📱" onBack={goHome} />
+      <Header title={t('qrRegistrations')} icon="📱" onBack={goHome} />
       
       {/* Filter Section */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Filter by Destination</Text>
+        <Text style={styles.sectionTitle}>{t('filterByDestination')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 8}}>
           <View style={styles.chipsRow}>
             <TouchableOpacity 
@@ -101,7 +103,7 @@ export const AdminRegistrations = ({goHome, navigation}) => {
               style={[styles.chip, filter === 'all' && styles.chipActive]}
             >
               <Text style={[styles.chipText, filter === 'all' && styles.chipTextActive]}>
-                All ({registrations.length})
+                {t('filterAll')} ({registrations.length})
               </Text>
             </TouchableOpacity>
             {DESTINATIONS.map((dest) => {
@@ -125,11 +127,11 @@ export const AdminRegistrations = ({goHome, navigation}) => {
       {/* Registrations List */}
       {loading && registrations.length === 0 ? (
         <View style={styles.card}>
-          <Text style={styles.rowSubtitle}>Loading registrations...</Text>
+          <Text style={styles.rowSubtitle}>{t('loadingRegistrations')}</Text>
         </View>
       ) : filteredRegistrations.length === 0 ? (
         <View style={styles.card}>
-          <Text style={styles.rowSubtitle}>No registrations found</Text>
+          <Text style={styles.rowSubtitle}>{t('noRegistrations')}</Text>
         </View>
       ) : (
         filteredRegistrations.map((reg) => (
@@ -147,9 +149,9 @@ export const AdminRegistrations = ({goHome, navigation}) => {
               <Text style={styles.round48Text}>📱</Text>
             </View>
             <View style={{flex: 1, marginLeft: 12}}>
-              <Text style={styles.rowTitle}>{reg.intendedDestination || 'Unknown Destination'}</Text>
+              <Text style={styles.rowTitle}>{reg.intendedDestination || t('unknownDestination')}</Text>
               <Text style={styles.rowSubtitle}>
-                Group: {reg.groupSize || 'N/A'} people • Entry: {reg.entryPointName || reg.entryPoint || 'N/A'}
+                {t('groupLabel')}: {reg.groupSize || 'N/A'} • {t('entryLabel')}: {reg.entryPointName || reg.entryPoint || 'N/A'}
               </Text>
               {reg.contactInfo?.name && (
                 <Text style={[styles.rowSubtitle, {fontSize: 11, marginTop: 2}]}>
@@ -179,7 +181,7 @@ export const AdminRegistrations = ({goHome, navigation}) => {
           disabled={loading}
         >
           <Text style={styles.linkText}>
-            {loading ? 'Loading...' : 'Load More'}
+            {loading ? t('loading') : t('loadMore')}
           </Text>
         </TouchableOpacity>
       )}

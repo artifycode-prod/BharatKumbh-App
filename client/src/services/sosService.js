@@ -9,7 +9,7 @@ import api from './api';
  * Create a new SOS alert
  */
 export const createSOS = async (data) => {
-  const response = await api.post('/api/sos', data);
+  const response = await api.post('/sos', data);
   return response.data.sos;
 };
 
@@ -22,7 +22,7 @@ export const getAllSOS = async (filters) => {
   if (filters?.priority) params.append('priority', filters.priority);
   
   const queryString = params.toString();
-  const url = `/api/sos${queryString ? `?${queryString}` : ''}`;
+  const url = `/sos${queryString ? `?${queryString}` : ''}`;
   
   const response = await api.get(url);
   return response.data.sosAlerts;
@@ -32,7 +32,7 @@ export const getAllSOS = async (filters) => {
  * Get user's own SOS alerts
  */
 export const getMySOS = async () => {
-  const response = await api.get('/api/sos/my-sos');
+  const response = await api.get('/sos/my-sos');
   return response.data.sosAlerts;
 };
 
@@ -40,7 +40,7 @@ export const getMySOS = async () => {
  * Acknowledge an SOS alert
  */
 export const acknowledgeSOS = async (sosId) => {
-  const response = await api.put(`/api/sos/${sosId}/acknowledge`);
+  const response = await api.put(`/sos/${sosId}/acknowledge`);
   return response.data.sos;
 };
 
@@ -48,7 +48,7 @@ export const acknowledgeSOS = async (sosId) => {
  * Resolve an SOS alert
  */
 export const resolveSOS = async (sosId) => {
-  const response = await api.put(`/api/sos/${sosId}/resolve`);
+  const response = await api.put(`/sos/${sosId}/resolve`);
   return response.data.sos;
 };
 

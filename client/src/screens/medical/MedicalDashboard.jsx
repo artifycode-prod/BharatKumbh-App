@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getAllCases } from '../../services/medicalService';
 import { getUserName, getUserRole } from '../../services/authService';
 
 export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cases, setCases] = useState([]);
@@ -21,7 +23,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
       setCases(allCases);
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      Alert.alert('Error', 'Failed to load medical cases');
+      Alert.alert(t('error'), t('failedToLoadCases'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,7 +49,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
       navigate('MedicalCaseDetail', { caseData: medicalCase });
     } else {
       console.error('Navigate function not available');
-      Alert.alert('Error', 'Navigation not available');
+      Alert.alert(t('error'), t('navigationNotAvailable'));
     }
   };
 
@@ -78,8 +80,8 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
             <Text style={styles.brandEmoji}>🚑</Text>
           </LinearGradient>
           <View style={{flex: 1}}>
-            <Text style={styles.brandTitle}>Medical Dashboard</Text>
-            <Text style={styles.brandSubtitle}>Health & Care</Text>
+            <Text style={styles.brandTitle}>{t('medicalDashboard')}</Text>
+            <Text style={styles.brandSubtitle}>{t('healthAndCare')}</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity 
@@ -95,14 +97,14 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
 
       {/* Filter Chips */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Medical Cases</Text>
+        <Text style={styles.sectionTitle}>{t('medicalCases')}</Text>
         <View style={styles.chipsRow}>
           <TouchableOpacity
             style={[styles.chip, filter === 'all' && styles.chipActive]}
             onPress={() => setFilter('all')}
           >
             <Text style={[styles.chipText, filter === 'all' && styles.chipTextActive]}>
-              All ({cases.length})
+              {t('filterAll')} ({cases.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -110,7 +112,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
             onPress={() => setFilter('pending')}
           >
             <Text style={[styles.chipText, filter === 'pending' && styles.chipTextActive]}>
-              Pending ({cases.filter(c => c.status === 'pending').length})
+              {t('filterPending')} ({cases.filter(c => c.status === 'pending').length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -118,7 +120,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
             onPress={() => setFilter('in-progress')}
           >
             <Text style={[styles.chipText, filter === 'in-progress' && styles.chipTextActive]}>
-              Active ({cases.filter(c => c.status === 'in-progress').length})
+              {t('filterActive')} ({cases.filter(c => c.status === 'in-progress').length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -126,7 +128,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
             onPress={() => setFilter('critical')}
           >
             <Text style={[styles.chipText, filter === 'critical' && styles.chipTextActive]}>
-              Critical ({cases.filter(c => c.severity === 'critical').length})
+              {t('filterCritical')} ({cases.filter(c => c.severity === 'critical').length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -136,11 +138,11 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
       {loading ? (
         <View style={styles.card}>
           <ActivityIndicator size="large" color="#EF4444" />
-          <Text style={[styles.rowSubtitle, {textAlign: 'center', marginTop: 12}]}>Loading cases...</Text>
+          <Text style={[styles.rowSubtitle, {textAlign: 'center', marginTop: 12}]}>{t('loadingCases')}</Text>
         </View>
       ) : filteredCases.length === 0 ? (
         <View style={styles.card}>
-          <Text style={[styles.rowSubtitle, {textAlign: 'center'}]}>No cases found</Text>
+          <Text style={[styles.rowSubtitle, {textAlign: 'center'}]}>{t('noCasesFound')}</Text>
         </View>
       ) : (
         filteredCases.map((medicalCase) => (
@@ -160,10 +162,10 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                 </View>
                 <View style={{flex: 1, marginLeft: 12}}>
                   <Text style={[styles.rowTitle, {fontSize: 16, marginBottom: 4}]}>
-                    {medicalCase.patientName || 'Unknown Patient'}
+                    {medicalCase.patientName || t('unknownPatient')}
                   </Text>
                   <Text style={[styles.rowSubtitle, {marginBottom: 4}]}>
-                    {medicalCase.caseType || 'Consultation'} • {medicalCase.severity || 'medium'}
+                    {medicalCase.caseType || t('consultation')} • {medicalCase.severity || 'medium'}
                   </Text>
                   {medicalCase.description && (
                     <Text style={[styles.rowSubtitle, {fontSize: 11, color: '#6B7280'}]} numberOfLines={2}>
@@ -186,7 +188,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                     </View>
                     {medicalCase.patientAge && (
                       <Text style={[styles.rowSubtitle, {fontSize: 10}]}>
-                        Age: {medicalCase.patientAge}
+                        {t('ageLabel')}: {medicalCase.patientAge}
                       </Text>
                     )}
                   </View>
@@ -205,7 +207,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
         <View style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20}}>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.sectionTitle}>Profile</Text>
+              <Text style={styles.sectionTitle}>{t('profile')}</Text>
               <TouchableOpacity onPress={() => setShowProfile(false)}>
                 <Text style={styles.textRedStrong}>✕</Text>
               </TouchableOpacity>
@@ -214,8 +216,8 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
               <LinearGradient colors={['#F87171', '#EF4444']} style={[styles.round64, {shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: {width: 0, height: 8}, shadowRadius: 16, elevation: 6}]}>
                 <Text style={styles.round64Text}>🚑</Text>
               </LinearGradient>
-              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || 'Medical Staff'}</Text>
-              <Text style={styles.smallMutedCenter}>Medical Team</Text>
+              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || t('medicalTeam')}</Text>
+              <Text style={styles.smallMutedCenter}>{t('medicalTeam')}</Text>
             </View>
             <TouchableOpacity
               style={[styles.primaryBtn, {backgroundColor: '#DC2626', marginTop: 16}]}
@@ -226,7 +228,7 @@ export const MedicalDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                 }
               }}
             >
-              <Text style={styles.primaryBtnText}>Sign Out</Text>
+              <Text style={styles.primaryBtnText}>{t('signOut')}</Text>
             </TouchableOpacity>
           </View>
         </View>

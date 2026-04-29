@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getAllItems, matchItems } from '../../services/lostFoundService';
 
 export const AdminLostFound = ({goHome, navigation}) => {
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ export const AdminLostFound = ({goHome, navigation}) => {
       setItems(itemsData);
     } catch (error) {
       console.error('Error loading items:', error);
-      Alert.alert('Error', 'Failed to load lost & found items');
+      Alert.alert(t('error'), t('failedToLoadLostFound'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,7 +94,7 @@ export const AdminLostFound = ({goHome, navigation}) => {
       contentContainerStyle={styles.screenPad}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadItems} />}
     >
-      <Header title="Lost & Found" icon="🔍" onBack={goHome} />
+      <Header title={t('lostFound')} icon="🔍" onBack={goHome} />
       
       {/* Search */}
       <View style={styles.card}>

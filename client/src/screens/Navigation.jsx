@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
 import { styles } from '../styles/styles';
 import { getCurrentPosition } from '../utils/location';
 
@@ -14,8 +14,16 @@ const LOCATION_TYPES = {
 	FACILITY: 'facility'
 };
 
-// Comprehensive Nashik locations with types and crowd density
-const NASHIK_LOCATIONS = [
+// Crowd level to translation key mapping
+const CROWD_LEVEL_KEYS = {
+	'Low': 'crowdLow',
+	'Moderate': 'crowdModerate',
+	'High': 'crowdHigh',
+	'Very High': 'crowdVeryHigh'
+};
+
+// Base Nashik locations (names/descriptions come from t() in component)
+const NASHIK_LOCATIONS_BASE = [
 	// Ghats
 	{
 		id: 'ramkund',
@@ -269,7 +277,7 @@ const getRouteSuggestions = (destination, currentLocation, allLocations) => {
 	
 	routes.push({
 		type: 'direct',
-		name: 'Direct Route',
+		nameKey: 'directRoute',
 		distance: directDistance,
 		time: calculateTime(directDistance, destination.crowdDensity),
 		crowdLevel: destination.crowdLevel,
@@ -309,7 +317,7 @@ const getRouteSuggestions = (destination, currentLocation, allLocations) => {
 		
 		routes.push({
 			type: 'alternate',
-			name: `Via ${waypoint.name}`,
+			viaName: waypoint.name,
 			distance: totalDistStr,
 			time: calculateTime(totalDistStr, avgCrowd),
 			crowdLevel: avgCrowd < 40 ? 'Low' : avgCrowd < 70 ? 'Moderate' : 'High',
@@ -322,8 +330,8 @@ const getRouteSuggestions = (destination, currentLocation, allLocations) => {
 	return routes.sort((a, b) => a.totalCrowd - b.totalCrowd);
 };
 
-// Open Google Maps with route
-const openGoogleMaps = (destination, waypoints = []) => {
+// Open Google Maps with route (t for i18n in error alerts)
+const openGoogleMaps = (destination, waypoints = [], t) => {
 	const { latitude, longitude } = destination.coordinates;
 	
 	let url;
@@ -349,14 +357,14 @@ const openGoogleMaps = (destination, waypoints = []) => {
 		}
 	}).catch(err => {
 		console.error('Error opening navigation:', err);
-		Alert.alert('Error', 'Could not open navigation app. Please install Google Maps.');
+		Alert.alert(t?.('error') || 'Error', t?.('couldNotOpenMaps') || 'Could not open navigation app. Please install Google Maps.');
 	});
 };
 
-// Open Google Maps with all locations marked
-const openGoogleMapsWithAllLocations = (locations, currentLocation) => {
+// Open Google Maps with all locations marked (t passed for i18n)
+const openGoogleMapsWithAllLocations = (locations, currentLocation, t) => {
 	if (!currentLocation) {
-		Alert.alert('Location Required', 'Please wait for location to load.');
+		Alert.alert(t?.('locationRequired') || 'Location Required', t?.('pleaseWaitForLocation') || 'Please wait for location to load.');
 		return;
 	}
 	
@@ -379,7 +387,7 @@ const openGoogleMapsWithAllLocations = (locations, currentLocation) => {
 		}
 	}).catch(err => {
 		console.error('Error opening maps:', err);
-		Alert.alert('Error', 'Could not open maps. Please install Google Maps.');
+		Alert.alert(t?.('error') || 'Error', t?.('couldNotOpenMaps') || 'Could not open maps. Please install Google Maps.');
 	});
 };
 
@@ -393,7 +401,23 @@ const openGoogleMapsWithMarkers = (locations, currentLocation) => {
 };
 
 export const Navigation = ({goHome}) => {
+	const { t, languageVersion } = useLanguage();
 	const [currentLocation, setCurrentLocation] = useState(null);
+
+	// Locations with translated names/descriptions - updates when language changes
+	const NASHIK_LOCATIONS = React.useMemo(() => {
+		return NASHIK_LOCATIONS_BASE.map(loc => {
+			const nameKey = `nav_${loc.id}_name`;
+			const descKey = `nav_${loc.id}_desc`;
+			const crowdKey = CROWD_LEVEL_KEYS[loc.crowdLevel];
+			return {
+				...loc,
+				name: t(nameKey) || loc.name,
+				description: t(descKey) || loc.description || '',
+				crowdLevelTranslated: crowdKey ? t(crowdKey) : loc.crowdLevel
+			};
+		});
+	}, [t, languageVersion]);
 	const [loadingLocation, setLoadingLocation] = useState(true);
 	const [selectedDestination, setSelectedDestination] = useState(null);
 	const [showMap, setShowMap] = useState(false);
@@ -446,12 +470,12 @@ export const Navigation = ({goHome}) => {
 		} else {
 			Alert.alert(
 				destination.name,
-				`${destination.description}\n\nCrowd Level: ${destination.crowdLevel} (${destination.crowdDensity}%)\nOccupancy: ${destination.currentOccupancy}/${destination.capacity}`,
+				`${destination.description}\n\n${t('crowd')}: ${destination.crowdLevelTranslated} (${destination.crowdDensity}%)\n${t('occupancyFormat')}: ${destination.currentOccupancy}/${destination.capacity}`,
 				[
-					{ text: 'Cancel', style: 'cancel' },
+					{ text: t('cancel'), style: 'cancel' },
 					{ 
-						text: 'Navigate', 
-						onPress: () => openGoogleMaps(destination),
+						text: t('navigate'), 
+						onPress: () => openGoogleMaps(destination, [], t),
 						style: 'default'
 					}
 				]
@@ -486,22 +510,21 @@ export const Navigation = ({goHome}) => {
 			contentContainerStyle={[styles.screenPad, {paddingBottom: 160}]}
 			showsVerticalScrollIndicator={false}
 		>
-			<Header title="Nashik Navigation" icon="🧭" accent="orange" onBack={goHome} />
 
 			{/* Current location card */}
 			<View style={styles.card}>
-				<Text style={styles.cardTitle}>Current Location</Text>
+				<Text style={styles.cardTitle}>{t('currentLocation')}</Text>
 				{loadingLocation ? (
 					<View style={{alignItems: 'center', marginTop: 12}}>
 						<ActivityIndicator size="small" color="#F59E0B" />
-						<Text style={[styles.rowSubtitle, {marginTop: 8}]}>Getting your location...</Text>
+						<Text style={[styles.rowSubtitle, {marginTop: 8}]}>{t('gettingYourLocation')}</Text>
 					</View>
 				) : (
 					<>
 						<Text style={styles.rowSubtitle}>
 							{currentLocation 
 								? `Lat: ${currentLocation.latitude.toFixed(4)}, Lng: ${currentLocation.longitude.toFixed(4)}`
-								: 'Near Panchavati, Ramkund Entrance'}
+								: t('nearPanchavatiRamkund')}
 						</Text>
 						<View style={{alignItems: 'center', marginTop: 12}}>
 							<LinearGradient colors={["#FFB74D", "#FF9800"]} style={styles.round64}>
@@ -513,7 +536,7 @@ export const Navigation = ({goHome}) => {
 							style={{marginTop: 8, alignSelf: 'center'}}
 							activeOpacity={0.7}
 						>
-							<Text style={[styles.textOrange, {fontSize: 12}]}>🔄 Refresh Location</Text>
+							<Text style={[styles.textOrange, {fontSize: 12}]}>🔄 {t('refreshLocation')}</Text>
 						</TouchableOpacity>
 					</>
 				)}
@@ -521,7 +544,7 @@ export const Navigation = ({goHome}) => {
 
 			{/* Filter by Location Type */}
 			<View style={styles.card}>
-				<Text style={styles.sectionTitle}>Filter Locations</Text>
+				<Text style={styles.sectionTitle}>{t('filterLocations')}</Text>
 				<View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8}}>
 					{['all', 'ghat', 'temple', 'camp', 'medical', 'facility'].map((type) => (
 						<TouchableOpacity
@@ -535,12 +558,12 @@ export const Navigation = ({goHome}) => {
 							]}
 						>
 							<Text style={selectedType === type ? styles.chipTextActive : styles.chipText}>
-								{type === 'all' ? '📍 All' : 
-								 type === 'ghat' ? '🌊 Ghats' :
-								 type === 'temple' ? '🛕 Temples' :
-								 type === 'camp' ? '⛺ Camps' :
-								 type === 'medical' ? '🏥 Medical' :
-								 '🏢 Facilities'}
+								{type === 'all' ? `📍 ${t('allLocations').split(' ')[0]}` : 
+								 type === 'ghat' ? `🌊 ${t('ghats')}` :
+								 type === 'temple' ? `🛕 ${t('temples')}` :
+								 type === 'camp' ? `⛺ ${t('camps')}` :
+								 type === 'medical' ? `🏥 ${t('medical')}` :
+								 `🏢 ${t('otherFacilities')}`}
 							</Text>
 						</TouchableOpacity>
 					))}
@@ -550,12 +573,12 @@ export const Navigation = ({goHome}) => {
 			{/* Locations List */}
 			<View style={styles.card}>
 				<Text style={styles.sectionTitle}>
-					{selectedType === 'all' ? 'All Locations' :
-					 selectedType === 'ghat' ? 'Ghats' :
-					 selectedType === 'temple' ? 'Temples' :
-					 selectedType === 'camp' ? 'Camps' :
-					 selectedType === 'medical' ? 'Medical Facilities' :
-					 'Other Facilities'} ({getFilteredLocations().length})
+					{selectedType === 'all' ? t('allLocations') :
+					 selectedType === 'ghat' ? t('ghats') :
+					 selectedType === 'temple' ? t('temples') :
+					 selectedType === 'camp' ? t('camps') :
+					 selectedType === 'medical' ? t('medicalFacilities') :
+					 t('otherFacilities')} ({getFilteredLocations().length})
 				</Text>
 				{getFilteredLocations().map((loc, index) => (
 					<TouchableOpacity
@@ -572,7 +595,7 @@ export const Navigation = ({goHome}) => {
 							<Text style={styles.rowSubtitle} numberOfLines={1}>{loc.description}</Text>
 							<View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
 								<Text style={[styles.rowSubtitle, {fontSize: 11, color: '#6B7280'}]}>
-									{loc.calculatedDistance || 'Calculating...'} • 
+									{loc.calculatedDistance || t('calculating')} • 
 								</Text>
 								<View style={{
 									backgroundColor: getCrowdColor(loc.crowdDensity),
@@ -582,7 +605,7 @@ export const Navigation = ({goHome}) => {
 									marginLeft: 4
 								}}>
 									<Text style={{color: 'white', fontSize: 10, fontWeight: '600'}}>
-										{loc.crowdLevel} ({loc.crowdDensity}%)
+										{loc.crowdLevelTranslated} ({loc.crowdDensity}%)
 									</Text>
 								</View>
 							</View>
@@ -596,7 +619,7 @@ export const Navigation = ({goHome}) => {
 
 			{/* Quick Actions */}
 			<View style={styles.card}>
-				<Text style={styles.sectionTitle}>Quick Actions</Text>
+				<Text style={styles.sectionTitle}>{t('quickActions')}</Text>
 				<TouchableOpacity 
 					activeOpacity={0.9} 
 					style={[styles.primaryBtn, {width: '100%', marginTop: 8}]} 
@@ -604,18 +627,18 @@ export const Navigation = ({goHome}) => {
 						if (currentLocation) {
 							openGoogleMapsWithMarkers(NASHIK_LOCATIONS, currentLocation);
 						} else {
-							Alert.alert('Location Required', 'Please wait for location to load.');
+							Alert.alert(t('locationRequired'), t('pleaseWaitForLocation'));
 						}
 					}}
 				>
-					<Text style={styles.primaryBtnText}>🗺️ View All on Google Maps</Text>
+					<Text style={styles.primaryBtnText}>🗺️ {t('viewAllOnGoogleMaps')}</Text>
 				</TouchableOpacity>
 				<TouchableOpacity 
 					activeOpacity={0.9} 
 					style={[styles.primaryBtn, {width: '100%', marginTop: 8, backgroundColor: '#10B981'}]} 
 					onPress={() => setShowMap(!showMap)}
 				>
-					<Text style={styles.primaryBtnText}>{showMap ? 'Hide' : 'Show'} Map View</Text>
+					<Text style={styles.primaryBtnText}>{showMap ? t('hideMapView') : t('showMapView')}</Text>
 				</TouchableOpacity>
 			</View>
 
@@ -623,7 +646,7 @@ export const Navigation = ({goHome}) => {
 			{showMap && (
 				<View style={[styles.cardTall, {marginBottom: 20, paddingBottom: 16}]}>
 					<View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
-						<Text style={styles.cardTitle}>Nashik Kumbh Mela - Live Map</Text>
+						<Text style={styles.cardTitle}>{t('nashikKumbhMelaLiveMap')}</Text>
 					</View>
 					
 					{/* Map Preview Card */}
@@ -654,13 +677,13 @@ export const Navigation = ({goHome}) => {
 								>
 									<Text style={{fontSize: 56, marginBottom: 12}}>🗺️</Text>
 									<Text style={[styles.cardTitle, {color: 'white', marginBottom: 6, fontSize: 18}]}>
-										Interactive Map
+										{t('interactiveMap')}
 									</Text>
 									<Text style={[styles.rowSubtitle, {color: 'rgba(255,255,255,0.9)', textAlign: 'center', marginBottom: 16, fontSize: 12}]}>
-										View all {NASHIK_LOCATIONS.length} locations{'\n'}with real-time crowd data
+										{t('viewLocationsWithCrowd').replace('{count}', NASHIK_LOCATIONS.length)}
 									</Text>
 									<TouchableOpacity 
-										onPress={() => openGoogleMapsWithAllLocations(NASHIK_LOCATIONS, currentLocation)}
+										onPress={() => openGoogleMapsWithAllLocations(NASHIK_LOCATIONS, currentLocation, t)}
 										style={[styles.primaryBtn, {
 											backgroundColor: 'white',
 											paddingHorizontal: 24,
@@ -676,7 +699,7 @@ export const Navigation = ({goHome}) => {
 										activeOpacity={0.8}
 									>
 										<Text style={[styles.primaryBtnText, {color: '#F59E0B', fontSize: 14, fontWeight: 'bold'}]}>
-											🗺️ Open in Google Maps
+											🗺️ {t('openInGoogleMaps')}
 										</Text>
 									</TouchableOpacity>
 								</LinearGradient>
@@ -684,7 +707,7 @@ export const Navigation = ({goHome}) => {
 						) : (
 							<View style={{justifyContent: 'center', alignItems: 'center'}}>
 								<ActivityIndicator size="large" color="#F59E0B" />
-								<Text style={[styles.rowSubtitle, {marginTop: 8, fontSize: 12}]}>Getting your location...</Text>
+								<Text style={[styles.rowSubtitle, {marginTop: 8, fontSize: 12}]}>{t('gettingYourLocation')}</Text>
 							</View>
 						)}
 					</View>
@@ -768,7 +791,7 @@ export const Navigation = ({goHome}) => {
 					}}>
 						<View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
 							<Text style={[styles.cardTitle, {flex: 1}]}>
-								Route to {selectedDestination?.name}
+								{t('routeTo')} {selectedDestination?.name}
 							</Text>
 							<TouchableOpacity onPress={() => setShowRoutes(false)}>
 								<Text style={[styles.textOrange, {fontSize: 18}]}>✕</Text>
@@ -781,7 +804,7 @@ export const Navigation = ({goHome}) => {
 									key={index}
 									onPress={() => {
 										setShowRoutes(false);
-										openGoogleMaps(selectedDestination, route.waypoints);
+										openGoogleMaps(selectedDestination, route.waypoints, t);
 									}}
 									style={{
 										padding: 16,
@@ -795,10 +818,10 @@ export const Navigation = ({goHome}) => {
 									<View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
 										<View style={{flex: 1}}>
 											<Text style={[styles.rowTitle, {marginBottom: 4}]}>
-												{index === 0 ? '⭐ ' : ''}{route.name}
+												{index === 0 ? '⭐ ' : ''}{route.nameKey ? t(route.nameKey) : `${t('via')} ${route.viaName || ''}`}
 											</Text>
 											<Text style={styles.rowSubtitle}>
-												Distance: {route.distance} • Time: {route.time}
+												{t('distance')}: {route.distance} • {t('time')}: {route.time}
 											</Text>
 											<View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
 												<View style={{
@@ -808,12 +831,12 @@ export const Navigation = ({goHome}) => {
 													borderRadius: 4
 												}}>
 													<Text style={{color: 'white', fontSize: 10, fontWeight: '600'}}>
-														Crowd: {route.crowdLevel}
+														{t('crowd')}: {CROWD_LEVEL_KEYS[route.crowdLevel] ? t(CROWD_LEVEL_KEYS[route.crowdLevel]) : route.crowdLevel}
 													</Text>
 												</View>
 												{route.waypoints.length > 0 && (
 													<Text style={[styles.rowSubtitle, {marginLeft: 8, fontSize: 10}]}>
-														Via: {route.waypoints.map(w => w.name).join(', ')}
+														{t('via')}: {route.waypoints.map(w => w.name).join(', ')}
 													</Text>
 												)}
 											</View>
@@ -825,7 +848,7 @@ export const Navigation = ({goHome}) => {
 						</ScrollView>
 						
 						<Text style={[styles.rowSubtitle, {marginTop: 12, fontSize: 11, textAlign: 'center', color: '#6B7280'}]}>
-							⭐ Recommended route (least crowded)
+							⭐ {t('recommendedRoute')}
 						</Text>
 					</View>
 				</View>

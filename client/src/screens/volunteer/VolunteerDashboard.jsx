@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getVolunteerDashboard, getAssignedTasks } from '../../services/volunteerService';
 import { getUserName, getUserRole } from '../../services/authService';
 
 export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -26,7 +28,7 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
       setTasks(tasksData);
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
+      Alert.alert(t('error'), t('failedToLoadDashboard'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -60,8 +62,8 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
             <Text style={styles.brandEmoji}>🤝</Text>
           </LinearGradient>
           <View style={{flex: 1}}>
-            <Text style={styles.brandTitle}>Volunteer Dashboard</Text>
-            <Text style={styles.brandSubtitle}>Service & Support</Text>
+            <Text style={styles.brandTitle}>{t('volunteerDashboard')}</Text>
+            <Text style={styles.brandSubtitle}>{t('serviceAndSupport')}</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity 
@@ -78,17 +80,17 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
       {/* Statistics */}
       {dashboard && (
         <View style={styles.grid}>
-          <StatCard emoji="🚨" value={dashboard.pendingSOS || 0} label="Pending SOS" color="#DC2626" />
-          <StatCard emoji="📋" value={dashboard.myAssignedSOS || 0} label="My Tasks" color="#3B82F6" />
-          <StatCard emoji="🔍" value={dashboard.openLostFound || 0} label="Lost/Found" color="#CA8A04" />
+          <StatCard emoji="🚨" value={dashboard.pendingSOS || 0} label={t('pendingSOS')} color="#DC2626" />
+          <StatCard emoji="📋" value={dashboard.myAssignedSOS || 0} label={t('myTasks')} color="#3B82F6" />
+          <StatCard emoji="🔍" value={dashboard.openLostFound || 0} label={t('lostFoundShort')} color="#CA8A04" />
         </View>
       )}
 
       {/* Assigned Tasks */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>My Assigned Tasks</Text>
+        <Text style={styles.sectionTitle}>{t('myAssignedTasks')}</Text>
         {tasks.length === 0 ? (
-          <Text style={styles.rowSubtitle}>No tasks assigned</Text>
+          <Text style={styles.rowSubtitle}>{t('noTasksAssigned')}</Text>
         ) : (
           tasks.slice(0, 5).map((task) => (
             <View key={task._id || task.id} style={styles.listRow}>
@@ -96,9 +98,9 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
                 <Text style={styles.round48Text}>📋</Text>
               </View>
               <View style={{flex: 1}}>
-                <Text style={styles.rowTitle}>Task</Text>
+                <Text style={styles.rowTitle}>{t('task')}</Text>
                 <Text style={styles.rowSubtitle}>
-                  Priority: {task.priority} • Status: {task.status}
+                  {t('priority')}: {task.priority} • {t('status')}: {task.status}
                 </Text>
                 {task.message && (
                   <Text style={[styles.rowSubtitle, {marginTop: 4, fontSize: 11}]}>
@@ -116,7 +118,7 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
         <View style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20}}>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.sectionTitle}>Profile</Text>
+              <Text style={styles.sectionTitle}>{t('profile')}</Text>
               <TouchableOpacity onPress={() => setShowProfile(false)}>
                 <Text style={styles.textRedStrong}>✕</Text>
               </TouchableOpacity>
@@ -125,8 +127,8 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
               <LinearGradient colors={['#34D399', '#10B981']} style={[styles.round64, {shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: {width: 0, height: 8}, shadowRadius: 16, elevation: 6}]}>
                 <Text style={styles.round64Text}>🤝</Text>
               </LinearGradient>
-              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || 'Volunteer'}</Text>
-              <Text style={styles.smallMutedCenter}>Volunteer</Text>
+              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || t('volunteer')}</Text>
+              <Text style={styles.smallMutedCenter}>{t('volunteer')}</Text>
             </View>
             <TouchableOpacity
               style={[styles.primaryBtn, {backgroundColor: '#DC2626', marginTop: 16}]}
@@ -137,7 +139,7 @@ export const VolunteerDashboard = ({goHome, navigate, onProfile, onSignOut}) => 
                 }
               }}
             >
-              <Text style={styles.primaryBtnText}>Sign Out</Text>
+              <Text style={styles.primaryBtnText}>{t('signOut')}</Text>
             </TouchableOpacity>
           </View>
         </View>

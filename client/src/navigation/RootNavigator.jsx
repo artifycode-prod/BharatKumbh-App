@@ -7,18 +7,10 @@ import { BottomNav } from '../components/BottomNav';
 import { MedicalBottomNav } from '../components/MedicalBottomNav';
 import { VolunteerBottomNav } from '../components/VolunteerBottomNav';
 import { AttractionDetail } from '../screens/AttractionDetail';
-import { Chatbot } from '../screens/Chatbot';
-import { Dashboard } from '../screens/Dashboard';
-import { Home } from '../screens/Home';
 import { LanguageSelection } from '../screens/LanguageSelection';
 import { Login } from '../screens/Login';
-import { Lost } from '../screens/Lost';
 import { LostFoundDetails } from '../screens/LostFoundDetails';
-import { Medical } from '../screens/Medical';
-import { Navigation as NavigationScreen } from '../screens/Navigation';
 import { Profile } from '../screens/Profile';
-import { QR } from '../screens/QR';
-import { SOS } from '../screens/SOS';
 import { Splash } from '../screens/Splash';
 import { AdminDashboard } from '../screens/admin/AdminDashboard';
 import { AdminEmergency } from '../screens/admin/AdminEmergency';
@@ -42,6 +34,7 @@ import { VolunteerTasks } from '../screens/volunteer/VolunteerTasks';
 import { getToken, getUserRole, signOut } from '../services/authService';
 import { clearLanguage, getLanguage, hasLanguageSelected } from '../services/languageService';
 import { styles } from '../styles/styles';
+import { PilgrimDrawer } from './PilgrimDrawer';
 
 const Stack = createStackNavigator();
 
@@ -62,6 +55,7 @@ const withBottomNav = (routeName, render) => {
             qr: 'QR',
             lost: 'Lost',
             dashboard: 'Dashboard',
+            aboutus: 'AboutUs', // Added AboutUs tab
           };
           navigation.navigate(map[next]);
         }}
@@ -204,7 +198,7 @@ const SplashWrapper = ({navigation}) => {
       if (token && role) {
         // User is logged in, go to their dashboard
         const roleMap = {
-          pilgrim: 'Home',
+          pilgrim: 'PilgrimDrawer',
           volunteer: 'VolunteerDashboard',
           admin: 'AdminDashboard',
           medical: 'MedicalDashboard',
@@ -239,76 +233,29 @@ export const RootNavigator = () => {
         )} />
         <Stack.Screen name="Login" component={({navigation}) => (
           <View style={styles.container}>
-            <Login goHome={() => {
-              // Check role and navigate accordingly
-              getUserRole().then((role) => {
-                const roleMap = {
-                  pilgrim: 'Home',
-                  volunteer: 'VolunteerDashboard',
-                  admin: 'AdminDashboard',
-                  medical: 'MedicalDashboard',
-                };
-                navigation.replace(roleMap[role || 'pilgrim']);
-              });
+            <Login goHome={(roleFromDb) => {
+              // Navigate by role from database (via /api/users/login)
+              const roleMap = {
+                pilgrim: 'PilgrimDrawer',
+                volunteer: 'VolunteerDashboard',
+                admin: 'AdminDashboard',
+                medical: 'MedicalDashboard',
+              };
+              const navigateTo = (role) => {
+                const target = roleMap[role || 'pilgrim'] || roleMap.pilgrim;
+                navigation.replace(target);
+              };
+              if (roleFromDb) {
+                navigateTo(roleFromDb);
+              } else {
+                getUserRole().then(navigateTo);
+              }
             }} />
           </View>
         )} />
 
         {/* Pilgrim Screens */}
-        <Stack.Screen name="Home" component={({navigation}) => (
-          withBottomNav('home', (goHome) => (
-            <Home
-              go={(p, params) => {
-                if (!p) {
-                  console.warn('Navigation: No route provided');
-                  return;
-                }
-                const routeMap = {
-                  'navigation': 'Navigation',
-                  'medical': 'Medical',
-                  'qr': 'QR',
-                  'lost': 'Lost',
-                  'dashboard': 'Dashboard',
-                  'AttractionDetail': 'AttractionDetail',
-                };
-                const route = routeMap[p] || p; // Fallback to p itself if not in map
-                try {
-                  if (params) {
-                    navigation.navigate(route, params);
-                  } else {
-                    navigation.navigate(route);
-                  }
-                } catch (error) {
-                  console.error('Navigation error:', error, 'Route:', route, 'Params:', params);
-                }
-              }}
-              onProfile={() => navigation.navigate('Profile')}
-              onSignOut={async () => {
-                await signOut();
-                navigation.replace('Login');
-              }}
-            />
-          ))({navigation})
-        )} />
-        <Stack.Screen name="Profile" component={({navigation}) => (
-          withBottomNav('home', (goHome) => (
-            <Profile 
-              goHome={goHome}
-              navigation={navigation}
-              onSignOut={async () => {
-                await signOut();
-                navigation.replace('Login');
-              }}
-            />
-          ))({navigation})
-        )} />
-        <Stack.Screen name="Navigation" component={withBottomNav('navigation', (goHome) => <NavigationScreen goHome={goHome} />)} />
-        <Stack.Screen name="Medical" component={withBottomNav('medical', (goHome) => <Medical goHome={goHome} />)} />
-        <Stack.Screen name="SOS" component={withBottomNav('sos', (goHome) => <SOS goHome={goHome} />)} />
-        <Stack.Screen name="Chatbot" component={withBottomNav('chatbot', (goHome) => <Chatbot goHome={goHome} />)} />
-        <Stack.Screen name="QR" component={withBottomNav('qr', (goHome) => <QR goHome={goHome} />)} />
-        <Stack.Screen name="Lost" component={withBottomNav('lost', (goHome, navigation) => <Lost goHome={goHome} navigation={navigation} />)} />
-        <Stack.Screen name="Dashboard" component={withBottomNav('dashboard', (goHome) => <Dashboard goHome={goHome} />)} />
+        <Stack.Screen name="PilgrimDrawer" component={PilgrimDrawer} />
         
         {/* Details Screens - No bottom nav */}
         <Stack.Screen name="AttractionDetail" component={({navigation, route}) => (

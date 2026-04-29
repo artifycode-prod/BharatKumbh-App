@@ -70,7 +70,7 @@ export const RegistrationDetails = ({route, navigation}) => {
     if (typeof selfie === 'string' && selfie !== 'present' && selfie.trim() !== '') {
       // Remove leading slash if present
       const path = selfie.startsWith('/') ? selfie.slice(1) : selfie;
-      return { uri: `${API_CONFIG.BASE_URL}/${path}` };
+      return { uri: `${API_CONFIG.SERVER_ROOT}/${path}` };
     }
     
     return null;

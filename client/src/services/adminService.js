@@ -9,7 +9,7 @@ import api from './api';
  * Get admin dashboard statistics
  */
 export const getAdminDashboard = async () => {
-  const response = await api.get('/api/admin/dashboard');
+  const response = await api.get('/admin/dashboard');
   return response.data.dashboard;
 };
 
@@ -17,7 +17,7 @@ export const getAdminDashboard = async () => {
  * Get all users
  */
 export const getAllUsers = async () => {
-  const response = await api.get('/api/users');
+  const response = await api.get('/users');
   return response.data.users;
 };
 
@@ -26,7 +26,7 @@ export const getAllUsers = async () => {
  */
 export const activateUser = async (userId) => {
   const response = await api.put(
-    `/api/admin/users/${userId}/activate`
+    `/admin/users/${userId}/activate`
   );
   return response.data.user;
 };
@@ -36,7 +36,7 @@ export const activateUser = async (userId) => {
  */
 export const deactivateUser = async (userId) => {
   const response = await api.put(
-    `/api/admin/users/${userId}/deactivate`
+    `/admin/users/${userId}/deactivate`
   );
   return response.data.user;
 };

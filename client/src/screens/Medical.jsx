@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
 import { createCase } from '../services/medicalService';
 import { styles } from '../styles/styles';
 import { getCurrentPosition } from '../utils/location';
 
 export const Medical = ({goHome}) => {
+  const { t, currentLanguage } = useLanguage();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [medicalIssue, setMedicalIssue] = useState('');
@@ -35,23 +36,23 @@ export const Medical = ({goHome}) => {
           longitude: location.longitude,
         });
 
-        Alert.alert('Emergency Alert Sent', 'Medical team has been notified and is on the way!', [
-          {text: 'OK', onPress: goHome}
+        Alert.alert(t('emergencyAlertSent'), t('medicalTeamNotified'), [
+          {text: t('ok'), onPress: goHome}
         ]);
       } catch (error) {
-        Alert.alert('Error', error.message || 'Failed to send emergency alert');
+        Alert.alert(t('error'), error.message || t('failedToSendEmergency'));
       } finally {
         setLoading(false);
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to send emergency alert');
+      Alert.alert(t('error'), error.message || t('failedToSendEmergency'));
       setLoading(false);
     }
   };
 
   const handleSubmit = async () => {
     if (!name.trim() || !medicalIssue.trim()) {
-      Alert.alert('Required Fields', 'Please fill in at least Name and Medical Issue');
+      Alert.alert(t('requiredFields'), t('fillNameAndMedical'));
       return;
     }
 
@@ -74,8 +75,8 @@ export const Medical = ({goHome}) => {
         longitude: location.longitude,
       });
 
-      Alert.alert('Medical Request Submitted', 'Your details have been shared with the medical team.', [
-        {text: 'OK', onPress: () => {
+      Alert.alert(t('medicalRequestSubmitted'), t('medicalDetailsShared'), [
+        {text: t('ok'), onPress: () => {
           setName('');
           setAge('');
           setMedicalIssue('');
@@ -84,7 +85,7 @@ export const Medical = ({goHome}) => {
         }}
       ]);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to submit medical request');
+      Alert.alert(t('error'), error.message || t('failedToSubmitMedical'));
     } finally {
       setLoading(false);
     }
@@ -92,60 +93,63 @@ export const Medical = ({goHome}) => {
 
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="Medical Assistance" icon="🚑" accent="red" onBack={goHome} />
       
-      <View style={styles.cardCenter}>
+      <View style={[styles.cardCenter, { flex: 0 }]} key={currentLanguage}>
         <LinearGradient colors={['#EF4444', '#B91C1C']} style={styles.bigRoundBtn}>
           <Text style={styles.bigRoundText}>🚨</Text>
         </LinearGradient>
-        <Text style={[styles.sectionTitle, styles.textRedStrong, {marginTop: 12}]}>Emergency Medical</Text>
-        <Text style={[styles.rowSubtitle, {marginTop: 4, textAlign: 'center'}]}>Fill in the details below to request medical assistance</Text>
+        <Text style={[styles.sectionTitle, styles.textRedStrong, {marginTop: 12}]}>{t('emergencyMedical')}</Text>
+        <Text style={[styles.rowSubtitle, {marginTop: 4, textAlign: 'center'}]}>{t('medicalRequestFillDetails')}</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Patient Information</Text>
+        <Text style={styles.sectionTitle}>{t('patientInformation')}</Text>
         
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>👤 Full Name *</Text>
+          <Text style={styles.inputLabel}>👤 {t('fullName')} *</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Enter your full name"
+            placeholder={t('enterFullNameLetters')}
             placeholderTextColor="#9A3412"
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => setName(text.replace(/[^a-zA-Z\s\u0900-\u097F]/g, ''))}
           />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>🎂 Age</Text>
+          <Text style={styles.inputLabel}>🎂 {t('age')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Enter age"
+            placeholder={t('enterAge2Digits')}
             placeholderTextColor="#9A3412"
             value={age}
-            onChangeText={setAge}
+            onChangeText={(text) => {
+              const digits = text.replace(/\D/g, '');
+              if (digits.length <= 2) setAge(digits);
+            }}
             keyboardType="number-pad"
+            maxLength={2}
           />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>🏥 Medical Issue *</Text>
+          <Text style={styles.inputLabel}>🏥 {t('medicalIssue')} *</Text>
           <TextInput
             style={[styles.textInput, {height: 90, textAlignVertical: 'top', paddingTop: 12}]}
-            placeholder="Describe your medical concern"
+            placeholder={t('describeMedicalConcern')}
             placeholderTextColor="#9A3412"
             value={medicalIssue}
-            onChangeText={setMedicalIssue}
+            onChangeText={(text) => setMedicalIssue(text.replace(/[0-9]/g, ''))}
             multiline
             numberOfLines={4}
           />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>⚠️ Known Allergies</Text>
+          <Text style={styles.inputLabel}>⚠️ {t('knownAllergies')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="List any allergies (if any)"
+            placeholder={t('listAllergies')}
             placeholderTextColor="#9A3412"
             value={allergies}
             onChangeText={setAllergies}
@@ -153,10 +157,10 @@ export const Medical = ({goHome}) => {
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>📞 Emergency Contact</Text>
+          <Text style={styles.inputLabel}>📞 {t('emergencyContact')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Emergency contact phone number"
+            placeholder={t('emergencyContactPlaceholder')}
             placeholderTextColor="#9A3412"
             value={emergencyContact}
             onChangeText={setEmergencyContact}
@@ -174,7 +178,7 @@ export const Medical = ({goHome}) => {
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.primaryBtnText}>🏥 Submit Medical Request</Text>
+          <Text style={styles.primaryBtnText}>🏥 {t('submitMedicalRequest')}</Text>
         )}
       </TouchableOpacity>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getAdminDashboard } from '../../services/adminService';
@@ -8,6 +9,7 @@ import { getAllCases } from '../../services/medicalService';
 import { getAllItems } from '../../services/lostFoundService';
 
 export const AdminReports = ({goHome}) => {
+  const { t } = useLanguage();
   const [dashboard, setDashboard] = useState(null);
   const [sosStats, setSosStats] = useState({ pending: 0, resolved: 0 });
   const [medicalStats, setMedicalStats] = useState({ pending: 0, resolved: 0 });
@@ -41,7 +43,7 @@ export const AdminReports = ({goHome}) => {
       setLostFoundStats({ open: openLostFound, resolved: resolvedLostFound });
     } catch (error) {
       console.error('Error loading reports:', error);
-      Alert.alert('Error', 'Failed to load reports');
+      Alert.alert(t('error'), t('failedToLoadReports'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -57,7 +59,7 @@ export const AdminReports = ({goHome}) => {
       contentContainerStyle={styles.screenPad}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadReports} />}
     >
-      <Header title="Reports" icon="📊" onBack={goHome} />
+      <Header title={t('reports')} icon="📊" onBack={goHome} />
       
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>System Statistics</Text>

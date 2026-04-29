@@ -1,12 +1,13 @@
 import React from 'react';
-import { Alert, Linking, ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Header } from '../components/Header';
-import { styles } from '../styles/styles';
+import { useLanguage } from '../contexts/LanguageContext';
 import { createSOS } from '../services/sosService';
+import { styles } from '../styles/styles';
 import { getCurrentPosition } from '../utils/location';
 
 export const SOS = ({goHome}) => {
+  const { t } = useLanguage();
   const [sosActivated, setSosActivated] = React.useState(false);
   const [holding, setHolding] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -24,10 +25,10 @@ export const SOS = ({goHome}) => {
           message: 'Emergency SOS alert activated',
           priority: 'critical'
         });
-        Alert.alert('SOS Alert Sent', 'Emergency services have been notified with your location!');
+        Alert.alert(t('sosAlertSent'), t('emergencyNotified'));
       } catch (error) {
         console.error('SOS Error:', error);
-        let errorMessage = 'Failed to send SOS alert';
+        let errorMessage = t('failedToSendSOS');
         
         if (error.response) {
           // Server responded with error
@@ -36,19 +37,20 @@ export const SOS = ({goHome}) => {
             errorMessage = error.response.data.errors.map(e => e.msg || e.message).join('\n');
           }
         } else if (error.request) {
-          // Request made but no response
-          errorMessage = 'Cannot connect to server. Please check your connection.';
+          // Request made but no response - network/connection error
+          const { API_CONFIG } = require('../config/api');
+          errorMessage = `${t('cannotConnectServer')}\n\nAPI: ${API_CONFIG.BASE_URL}\n\n• Ensure server is running: cd server && npm run dev\n• Android emulator: use 10.0.2.2:5000\n• Physical device: use your computer IP (e.g. 192.168.1.x:5000)`;
         } else {
           errorMessage = error.message || errorMessage;
         }
         
-        Alert.alert('Error', errorMessage);
+        Alert.alert(t('error'), errorMessage);
       } finally {
         setLoading(false);
       }
     } catch (error) {
       console.error('Location Error:', error);
-      Alert.alert('Error', error.message || 'Failed to get location for SOS alert');
+      Alert.alert(t('error'), error.message || t('failedToSendSOS'));
       setLoading(false);
     }
   };
@@ -78,7 +80,6 @@ export const SOS = ({goHome}) => {
 
   return (
     <ScrollView contentContainerStyle={[styles.screenPad, {paddingBottom: 140, backgroundColor: '#111827'}]}>
-      <Header title="EMERGENCY SOS" icon="🚨" accent="red" onBack={goHome} />
       <View style={styles.textCenter}>
         <View style={styles.sosPulseWrap}>
           <View style={[styles.sosPulse, {opacity: 0.3}]} />
@@ -99,9 +100,9 @@ export const SOS = ({goHome}) => {
           </LinearGradient>
         </View>
         <Text style={styles.sosNote}>
-          {loading ? 'Sending SOS alert...' : sosActivated ? 'Emergency signal sent!' : holding ? 'Keep holding to activate SOS…' : 'HOLD FOR 5 SECONDS TO ACTIVATE'}
+          {loading ? t('sendingSOS') : sosActivated ? t('emergencySent') : holding ? t('keepHolding') : t('holdToActivate')}
         </Text>
-        <Text style={styles.sosSubNote}>Emergency services will be notified immediately</Text>
+        <Text style={styles.sosSubNote}>{t('emergencyServicesNotified')}</Text>
       </View>
       <View style={[styles.card, {marginTop: 16}]}>
         <ActionRow emoji="👮" title="Call Police" subtitle="Direct line to security" color="#DC2626" btnLabel="Respond" />

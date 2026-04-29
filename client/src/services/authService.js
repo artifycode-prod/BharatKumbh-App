@@ -10,26 +10,35 @@ const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user_data';
 
 /**
- * Register a new user
+ * Register a new user (POST /api/auth/register)
  */
 export const register = async (data) => {
-  const response = await api.post('/api/auth/register', data);
+  const response = await api.post('/auth/register', data);
   
   if (response.data.success && response.data.token) {
     await AsyncStorage.setItem(TOKEN_KEY, response.data.token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+    if (response.data.user?.role) {
+      await AsyncStorage.setItem('user_role', response.data.user.role);
+    }
+    if (response.data.user?.name) {
+      await AsyncStorage.setItem('user_name', response.data.user.name);
+    }
   }
   
   return response.data;
 };
 
 /**
- * Login user
+ * Login user (by email or user id + password)
  */
 export const login = async (data) => {
   try {
-    console.log('🔐 Login attempt with:', { email: data.email, password: '***' });
-    const response = await api.post('/api/auth/login', data);
+    const payload = data.id
+      ? { id: data.id, password: data.password }
+      : { email: data.email, password: data.password };
+    console.log('🔐 Login attempt with:', { email: data.email || data.id, password: '***' });
+    const response = await api.post('/auth/login', payload);
     console.log('✅ Login response:', { success: response.data.success, hasToken: !!response.data.token, user: response.data.user });
     
     if (response.data.success && response.data.token) {
@@ -58,7 +67,7 @@ export const login = async (data) => {
  * Get current user
  */
 export const getCurrentUser = async () => {
-  const response = await api.get('/api/auth/me');
+  const response = await api.get('/auth/me');
   return response.data.user;
 };
 
@@ -67,7 +76,7 @@ export const getCurrentUser = async () => {
  */
 export const updateLocation = async (location) => {
   const response = await api.put(
-    '/api/auth/update-location',
+    '/auth/update-location',
     location
   );
   return response.data.user;
@@ -121,7 +130,7 @@ export const getUserRole = async () => {
 };
 
 /**
- * Test if token is valid by calling /api/auth/me
+ * Test if token is valid by calling /auth/me
  */
 export const testToken = async () => {
   try {
@@ -134,7 +143,7 @@ export const testToken = async () => {
       return { valid: false, error: 'No token found' };
     }
     
-    const response = await api.get('/api/auth/me');
+    const response = await api.get('/auth/me');
     console.log('✅ Token is valid, user:', response.data.user);
     return { valid: true, user: response.data.user };
   } catch (error) {
@@ -148,6 +157,21 @@ export const testToken = async () => {
 };
 
 /**
+ * Get users from /api/users (for quick login - staff roles)
+ * Seeded users have password = role (admin, volunteer, medical)
+ */
+export const getUsersForLogin = async () => {
+  try {
+    const response = await api.get('/users');
+    const users = response?.data?.users || response?.data || [];
+    const list = Array.isArray(users) ? users : [];
+    return list.filter((u) => u && ['admin', 'volunteer', 'medical'].includes(u.role));
+  } catch (err) {
+    return [];
+  }
+};
+
+/**
  * Sign out user (alias for logout)
  */
 export const signOut = async () => {
@@ -156,39 +180,33 @@ export const signOut = async () => {
 
 /**
  * Sign in user (wrapper for login)
+ * Fetches user details from database via /api/auth/login
  */
 export const signIn = async (identifier, password, role) => {
   try {
-    // Support email or phone login
-    // Normalize the email to match server expectations
-    let email = (identifier || '').trim().toLowerCase();
+    const idOrEmail = (identifier || '').trim();
     const normalizedPassword = (password || '').trim();
-    
-    if (!email.includes('@')) {
-      email = `${email}@kumbh.com`;
-    }
-    
-    const loginData = {
-      email: email,
-      password: normalizedPassword,
-    };
+    const roleMap = { admin: 'admin@kumbh.com', volunteer: 'volunteer@kumbh.com', medical: 'medical@kumbh.com' };
 
-    console.log('🚀 SignIn called with:', { 
-      identifier, 
-      email, 
-      role,
-      passwordLength: normalizedPassword.length 
-    });
+    // Build login payload: id (UUID) or email
+    const loginData = idOrEmail.includes('@')
+      ? { email: idOrEmail.toLowerCase(), password: normalizedPassword }
+      : roleMap[idOrEmail.toLowerCase()]
+        ? { email: roleMap[idOrEmail.toLowerCase()], password: normalizedPassword }
+        : { id: idOrEmail, password: normalizedPassword };
+
+    console.log('🚀 SignIn called with:', { identifier: idOrEmail, role });
     const response = await login(loginData);
     
-    // Store user data in AsyncStorage for compatibility
+    // Store full user from database in AsyncStorage
     if (response.success && response.user) {
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
       await AsyncStorage.setItem('user_role', response.user.role);
       await AsyncStorage.setItem('user_name', response.user.name || response.user.email || response.user.phone || identifier);
-      console.log('✅ SignIn successful, user data stored');
+      console.log('✅ SignIn successful, user from DB stored:', { id: response.user.id, role: response.user.role, name: response.user.name });
     }
     
-    return { token: response.token, role: response.user.role };
+    return { token: response.token, user: response.user, role: response.user.role };
   } catch (error) {
     console.error('❌ SignIn error:', error);
     const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please check your credentials.';

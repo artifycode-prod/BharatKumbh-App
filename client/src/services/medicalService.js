@@ -9,7 +9,7 @@ import api from './api';
  * Create a new medical case
  */
 export const createCase = async (data) => {
-  const response = await api.post('/api/medical/cases', data);
+  const response = await api.post('/medical/cases', data);
   return response.data.medicalCase;
 };
 
@@ -17,7 +17,7 @@ export const createCase = async (data) => {
  * Get all medical cases (for medical staff/admin)
  */
 export const getAllCases = async () => {
-  const response = await api.get('/api/medical/cases');
+  const response = await api.get('/medical/cases');
   return response.data.cases || [];
 };
 
@@ -25,7 +25,7 @@ export const getAllCases = async () => {
  * Get user's own medical cases
  */
 export const getMyCases = async () => {
-  const response = await api.get('/api/medical/cases/my-cases');
+  const response = await api.get('/medical/cases/my-cases');
   return response.data.cases || [];
 };
 
@@ -33,7 +33,7 @@ export const getMyCases = async () => {
  * Assign a case to medical staff
  */
 export const assignCase = async (caseId, staffId) => {
-  const response = await api.put(`/api/medical/cases/${caseId}/assign`, {
+  const response = await api.put(`/medical/cases/${caseId}/assign`, {
     assignedTo: staffId,
   });
   return response.data.medicalCase;
@@ -43,7 +43,7 @@ export const assignCase = async (caseId, staffId) => {
  * Add a note to a medical case
  */
 export const addNote = async (caseId, note) => {
-  const response = await api.put(`/api/medical/cases/${caseId}/add-note`, {
+  const response = await api.put(`/medical/cases/${caseId}/add-note`, {
     note,
   });
   return response.data.medicalCase;
@@ -53,7 +53,7 @@ export const addNote = async (caseId, note) => {
  * Resolve a medical case
  */
 export const resolveCase = async (caseId) => {
-  const response = await api.put(`/api/medical/cases/${caseId}/resolve`);
+  const response = await api.put(`/medical/cases/${caseId}/resolve`);
   return response.data.medicalCase;
 };
 

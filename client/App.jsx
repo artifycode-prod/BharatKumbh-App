@@ -1,4 +1,4 @@
-import React from 'react';
+import 'react-native-reanimated';
 import { LanguageProvider } from './src/contexts/LanguageContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 

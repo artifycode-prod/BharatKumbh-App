@@ -120,11 +120,12 @@ console.log('');
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   console.log('✅ Health check requested');
+  const { isConnected } = require('./config/database');
   res.json({
     status: 'OK',
     message: 'Bharat Kumbh Backend API is running',
     timestamp: new Date().toISOString(),
-    mongodb: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: isConnected() ? 'connected' : 'disconnected'
   });
 });
 
@@ -160,9 +161,11 @@ app.get('/', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log('❌ 404 - Route not found:', req.method, req.path, req.originalUrl);
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
+    received: { method: req.method, path: req.path, url: req.originalUrl }
   });
 });
 
@@ -176,8 +179,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Environment validation
-const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+// Environment validation (DATABASE_URL or POSTGRES_URI for PostgreSQL)
+const requiredEnvVars = ['JWT_SECRET'];
+const dbEnvVars = ['DATABASE_URL', 'POSTGRES_URI'];
+const hasDbConfig = dbEnvVars.some(envVar => process.env[envVar]);
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -188,6 +193,9 @@ if (missingEnvVars.length > 0) {
   } else {
     console.warn('⚠️  Continuing in development mode, but some features may not work correctly.');
   }
+}
+if (!hasDbConfig) {
+  console.warn('⚠️  No DATABASE_URL or POSTGRES_URI set - database features will not work.');
 }
 
 // Start server

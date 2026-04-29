@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getLanguage, setLanguage as saveLanguage, getTranslations, LANGUAGES, translations as translationsData } from '../services/languageService';
+import { getLanguage, setLanguage as saveLanguage, LANGUAGES, translations as translationsData } from '../services/languageService';
 
 const LanguageContext = createContext();
 
@@ -7,6 +7,7 @@ export const LanguageProvider = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState(LANGUAGES.ENGLISH);
   const [translations, setTranslations] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [languageVersion, setLanguageVersion] = useState(0);
 
   useEffect(() => {
     loadLanguage();
@@ -44,13 +45,12 @@ export const LanguageProvider = ({ children }) => {
     try {
       console.log('🔄 LanguageContext - Changing language to:', language);
       await saveLanguage(language);
-      setCurrentLanguage(language);
-      // Force reload translations with new language
       const lang = language || LANGUAGES.ENGLISH;
       const trans = translationsData[lang] || translationsData[LANGUAGES.ENGLISH];
+      setCurrentLanguage(lang);
       setTranslations(trans);
+      setLanguageVersion((v) => v + 1); // Force all consumers to re-render
       console.log('✅ LanguageContext - Language changed to:', lang);
-      console.log('✅ LanguageContext - Translations updated, sample:', Object.keys(trans).slice(0, 5));
     } catch (error) {
       console.error('❌ LanguageContext - Error changing language:', error);
     }
@@ -66,7 +66,8 @@ export const LanguageProvider = ({ children }) => {
       translations, 
       changeLanguage, 
       t,
-      loading 
+      loading,
+      languageVersion 
     }}>
       {children}
     </LanguageContext.Provider>

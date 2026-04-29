@@ -2,22 +2,23 @@ const express = require('express');
 const SOS = require('../models/SOS');
 const LostFound = require('../models/LostFound');
 const { protect, authorize } = require('../middleware/auth');
+const { isConnected } = require('../config/database');
 
 const router = express.Router();
 
-// All routes require volunteer, admin, or medical role
 router.use(protect);
 router.use(authorize('volunteer', 'admin', 'medical'));
 
-// @route   GET /api/volunteer/dashboard
-// @desc    Get volunteer dashboard data
-// @access  Private (Volunteer, Admin, Medical)
 router.get('/dashboard', async (req, res) => {
   try {
+    if (!isConnected()) {
+      return res.status(503).json({ success: false, message: 'Database not available' });
+    }
+
     const pendingSOS = await SOS.countDocuments({ status: 'pending' });
-    const myAssignedSOS = await SOS.countDocuments({ 
+    const myAssignedSOS = await SOS.countDocuments({
       assignedTo: req.user.id,
-      status: { $in: ['pending', 'acknowledged'] }
+      statusIn: ['pending', 'acknowledged']
     });
     const openLostFound = await LostFound.countDocuments({ status: 'open' });
 
@@ -31,24 +32,20 @@ router.get('/dashboard', async (req, res) => {
     });
   } catch (error) {
     console.error('Get dashboard error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// @route   GET /api/volunteer/assigned-tasks
-// @desc    Get assigned SOS tasks
-// @access  Private (Volunteer, Admin, Medical)
 router.get('/assigned-tasks', async (req, res) => {
   try {
-    const tasks = await SOS.find({ 
+    if (!isConnected()) {
+      return res.status(503).json({ success: false, message: 'Database not available' });
+    }
+
+    const tasks = await SOS.find({
       assignedTo: req.user.id,
-      status: { $in: ['pending', 'acknowledged'] }
-    })
-      .populate('userId', 'name email phone')
-      .sort({ createdAt: -1 });
+      statusIn: ['pending', 'acknowledged']
+    });
 
     res.json({
       success: true,
@@ -57,12 +54,8 @@ router.get('/assigned-tasks', async (req, res) => {
     });
   } catch (error) {
     console.error('Get assigned tasks error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
 module.exports = router;
-

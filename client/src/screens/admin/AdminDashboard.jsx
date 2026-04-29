@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getAdminDashboard } from '../../services/adminService';
 import { getUserName, getUserRole } from '../../services/authService';
 import { getAllRegistrations } from '../../services/qrService';
 import { styles } from '../../styles/styles';
 
 export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -33,7 +35,7 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
       setTotalRegisteredUsers(totalUsers);
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
+      Alert.alert(t('error'), t('failedToLoadDashboard'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -65,13 +67,13 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
               <Text style={styles.brandEmoji}>🔱</Text>
             </LinearGradient>
             <View style={{flex: 1}}>
-              <Text style={styles.brandTitle}>Admin Dashboard</Text>
-              <Text style={styles.brandSubtitle}>Administration Panel</Text>
+              <Text style={styles.brandTitle}>{t('adminDashboard')}</Text>
+              <Text style={styles.brandSubtitle}>{t('administrationPanel')}</Text>
             </View>
           </View>
         </View>
         <View style={styles.card}>
-          <Text style={styles.rowSubtitle}>Loading...</Text>
+          <Text style={styles.rowSubtitle}>{t('loading')}</Text>
         </View>
       </ScrollView>
     );
@@ -104,33 +106,33 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
       </View>
 
       {/* Statistics Cards */}
-      <Text style={styles.sectionTitle}>Dashboard Overview</Text>
+      <Text style={styles.sectionTitle}>{t('dashboardOverview')}</Text>
       <View style={styles.grid}>
         <StatCard 
           emoji="📱" 
           value={totalRegisteredUsers} 
-          label="Registered Pilgrims" 
+          label={t('registeredPilgrims')} 
           colors={['#3B82F6', '#2563EB']}
           onPress={() => navigate && navigate('Registrations')}
         />
         <StatCard 
           emoji="📊" 
           value={registrations.length} 
-          label="Total Registrations" 
+          label={t('totalRegistrations')} 
           colors={['#A78BFA', '#8B5CF6']}
           onPress={() => navigate && navigate('Registrations')}
         />
         <StatCard 
           emoji="🔍" 
           value={dashboard?.lostFound?.open || 0} 
-          label="Lost & Found" 
+          label={t('lostFound')} 
           colors={['#FCD34D', '#CA8A04']}
           onPress={() => navigate && navigate('LostFound')}
         />
         <StatCard 
           emoji="🏥" 
           value={dashboard?.medical?.pending || 0} 
-          label="Medical Emergencies" 
+          label={t('medicalEmergencies')} 
           colors={['#FCA5A5', '#F87171']}
           onPress={() => navigate && navigate('MedicalEmergencies')}
         />
@@ -138,7 +140,7 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
 
       {/* Recent Activity */}
       <View style={[styles.card, {marginTop: 12}]}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>{t('recentActivity')}</Text>
         {registrations.length > 0 ? (
           <>
             {registrations.slice(0, 5).map((reg) => (
@@ -147,9 +149,9 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                   <Text style={styles.round40Text}>📱</Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={styles.rowTitle}>{reg.intendedDestination || 'Unknown Destination'}</Text>
+                  <Text style={styles.rowTitle}>{reg.intendedDestination || t('unknownDestination')}</Text>
                   <Text style={styles.rowSubtitle}>
-                    Group: {reg.groupSize || 'N/A'} people • Entry: {reg.entryPointName || reg.entryPoint || 'N/A'}
+                    {t('groupLabel')}: {reg.groupSize || 'N/A'} • {t('entryLabel')}: {reg.entryPointName || reg.entryPoint || 'N/A'}
                   </Text>
                   {reg.registeredAt && (
                     <Text style={[styles.rowSubtitle, {fontSize: 10, marginTop: 2, color: '#9A3412'}]}>
@@ -169,39 +171,39 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                 onPress={() => navigate && navigate('Registrations')}
                 style={{marginTop: 8, alignItems: 'center'}}
               >
-                <Text style={styles.linkText}>View All Registrations →</Text>
+                <Text style={styles.linkText}>{t('viewAllRegistrations')} →</Text>
               </TouchableOpacity>
             )}
           </>
         ) : (
-          <Text style={styles.rowSubtitle}>No recent registrations</Text>
+          <Text style={styles.rowSubtitle}>{t('noRecentRegistrations')}</Text>
         )}
       </View>
 
       {/* Quick Stats */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Quick Statistics</Text>
+        <Text style={styles.sectionTitle}>{t('quickStatistics')}</Text>
         <View style={{flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 8}}>
           <View style={{width: '48%', marginBottom: 12, padding: 8, backgroundColor: 'rgba(255,153,51,0.05)', borderRadius: 12}}>
-            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>Total Users</Text>
+            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>{t('totalUsers')}</Text>
             <Text style={[styles.rowTitle, {fontSize: 20, marginTop: 4}]}>
               {dashboard?.users?.total || 0}
             </Text>
           </View>
           <View style={{width: '48%', marginBottom: 12, padding: 8, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 12}}>
-            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>Volunteers</Text>
+            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>{t('volunteer')}</Text>
             <Text style={[styles.rowTitle, {fontSize: 20, marginTop: 4, color: '#10B981'}]}>
               {dashboard?.users?.volunteers || 0}
             </Text>
           </View>
           <View style={{width: '48%', marginBottom: 12, padding: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12}}>
-            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>Medical Staff</Text>
+            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>{t('medicalStaff')}</Text>
             <Text style={[styles.rowTitle, {fontSize: 20, marginTop: 4, color: '#EF4444'}]}>
               {dashboard?.users?.medicalStaff || 0}
             </Text>
           </View>
           <View style={{width: '48%', marginBottom: 12, padding: 8, backgroundColor: 'rgba(22, 163, 74, 0.1)', borderRadius: 12}}>
-            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>Resolved SOS</Text>
+            <Text style={[styles.rowSubtitle, {fontSize: 11}]}>{t('resolvedSOS')}</Text>
             <Text style={[styles.rowTitle, {fontSize: 20, marginTop: 4, color: '#16A34A'}]}>
               {dashboard?.sos?.resolved || 0}
             </Text>
@@ -214,7 +216,7 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
         <View style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20}}>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.sectionTitle}>Profile</Text>
+              <Text style={styles.sectionTitle}>{t('profile')}</Text>
               <TouchableOpacity onPress={() => setShowProfileModal(false)}>
                 <Text style={styles.textRedStrong}>✕</Text>
               </TouchableOpacity>
@@ -223,8 +225,8 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
               <LinearGradient colors={['#60A5FA', '#3B82F6']} style={[styles.round64, {shadowColor: '#000', shadowOpacity: 0.12, shadowOffset: {width: 0, height: 8}, shadowRadius: 16, elevation: 6}]}>
                 <Text style={styles.round64Text}>🔱</Text>
               </LinearGradient>
-              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || 'Admin'}</Text>
-              <Text style={styles.smallMutedCenter}>Administrator</Text>
+              <Text style={[styles.authTitle, {marginTop: 12}]}>{userName || t('admin')}</Text>
+              <Text style={styles.smallMutedCenter}>{t('administrator')}</Text>
             </View>
             <TouchableOpacity
               style={[styles.primaryBtn, {backgroundColor: '#DC2626', marginTop: 16}]}
@@ -235,7 +237,7 @@ export const AdminDashboard = ({goHome, navigate, onProfile, onSignOut}) => {
                 }
               }}
             >
-              <Text style={styles.primaryBtnText}>Sign Out</Text>
+              <Text style={styles.primaryBtnText}>{t('signOut')}</Text>
             </TouchableOpacity>
           </View>
         </View>

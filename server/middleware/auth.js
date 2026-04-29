@@ -27,36 +27,9 @@ exports.protect = async (req, res, next) => {
       console.log('🔐 Verifying token with secret:', jwtSecret ? 'SET' : 'NOT SET');
       const decoded = jwt.verify(token, jwtSecret);
       console.log('✅ Token decoded successfully:', { id: decoded.id, exp: decoded.exp });
-      
-      // Handle demo users (IDs starting with "demo-")
-      if (decoded.id && decoded.id.startsWith('demo-')) {
-        // Create a virtual user object for demo users
-        const role = decoded.id.replace('demo-', '');
-        const demoUsers = {
-          'pilgrim': { id: 'demo-pilgrim', role: 'pilgrim', name: 'Pilgrim User', email: 'pilgrim@kumbh.com', phone: '0000000000', isActive: true },
-          'volunteer': { id: 'demo-volunteer', role: 'volunteer', name: 'Volunteer User', email: 'volunteer@kumbh.com', phone: '0000000000', isActive: true },
-          'admin': { id: 'demo-admin', role: 'admin', name: 'Admin User', email: 'admin@kumbh.com', phone: '0000000000', isActive: true },
-          'medical': { id: 'demo-medical', role: 'medical', name: 'Medical Team User', email: 'medical@kumbh.com', phone: '0000000000', isActive: true }
-        };
-        
-        const demoUser = demoUsers[role];
-        if (demoUser) {
-          req.user = {
-            id: demoUser.id,
-            _id: demoUser.id,
-            role: demoUser.role,
-            name: demoUser.name,
-            email: demoUser.email,
-            phone: demoUser.phone,
-            isActive: demoUser.isActive
-          };
-          next();
-          return;
-        }
-      }
-      
-      // Get user from token (for real database users)
-      req.user = await User.findById(decoded.id).select('-password');
+
+      // Get user from database (admin/volunteer/medical are seeded via db:seed)
+      req.user = await User.findById(decoded.id);
       
       if (!req.user) {
         return res.status(401).json({

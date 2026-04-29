@@ -3,12 +3,13 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DatePicker from 'react-native-date-picker';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
 import { getAllItems, reportItem } from '../services/lostFoundService';
 import { styles } from '../styles/styles';
 import { getCurrentPosition } from '../utils/location';
 
 export const Lost = ({goHome, navigation: navProp}) => {
+  const { t } = useLanguage();
   // Try to get navigation from hook first, fallback to prop
   let navigationHook;
   try {
@@ -42,13 +43,13 @@ export const Lost = ({goHome, navigation: navProp}) => {
 
   const handleSubmit = async () => {
     const missing = [];
-    if (!title.trim()) missing.push(mode === 'lost' ? 'What is lost' : 'What is found');
-    if (!desc.trim()) missing.push('Description');
-    if (!place.trim()) missing.push(mode === 'lost' ? 'Where lost' : 'Where found');
-    if (!contact.trim()) missing.push('Contact phone');
+    if (!title.trim()) missing.push(mode === 'lost' ? t('whatIsLost') : t('whatIsFound'));
+    if (!desc.trim()) missing.push(t('description'));
+    if (!place.trim()) missing.push(mode === 'lost' ? t('whereLost') : t('whereFound'));
+    if (!contact.trim()) missing.push(t('contactPhone'));
     
     if (missing.length) {
-      Alert.alert('Please fill required fields', missing.join('\n'));
+      Alert.alert(t('pleaseFillRequired'), missing.join('\n'));
       return;
     }
 
@@ -79,7 +80,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
       // Reload recent reports after successful submission
       loadRecentReports();
       
-      Alert.alert('Success', mode === 'lost' ? 'Lost report submitted successfully.' : 'Found report submitted successfully.', [
+      Alert.alert(t('success'), mode === 'lost' ? t('lostReportSubmitted') : t('foundReportSubmitted'), [
         { text: 'OK', onPress: () => {
           setTitle('');
           setDesc('');
@@ -91,15 +92,12 @@ export const Lost = ({goHome, navigation: navProp}) => {
       ]);
     } catch (error) {
       console.error('Report submission error:', error);
-      let errorMessage = 'Failed to submit report';
-      
-      if (error.response) {
-        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Submission Failed', errorMessage);
+      let errorMessage = t('failedToSubmitReport');
+      const data = error?.response?.data;
+      if (data?.message) errorMessage = data.message;
+      else if (error?.message) errorMessage = error.message;
+      else if (error?.response) errorMessage = `Server error: ${error.response.status}`;
+      Alert.alert(t('submissionFailed'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -195,7 +193,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
   }, [searchText, mode, allReports]);
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Recently';
+    if (!dateString) return t('recently');
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -203,11 +201,11 @@ export const Lost = ({goHome, navigation: navProp}) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) return t('justNow');
+    if (diffMins < 60) return `${diffMins} ${t('minutesAgo')}`;
+    if (diffHours < 24) return `${diffHours} ${t('hoursAgo')}`;
+    if (diffDays === 1) return t('yesterday');
+    if (diffDays < 7) return `${diffDays} ${t('daysAgo')}`;
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   };
 
@@ -216,17 +214,16 @@ export const Lost = ({goHome, navigation: navProp}) => {
       contentContainerStyle={styles.screenPad}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Header title="Lost & Found" icon="🔍" onBack={goHome} />
 
       {/* Toggle */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Choose an option</Text>
+        <Text style={styles.sectionTitle}>{t('chooseOption')}</Text>
         <View style={styles.chipsRow}>
           <TouchableOpacity onPress={() => setMode('lost')} activeOpacity={0.9} style={[styles.chip, mode === 'lost' && styles.chipActive]}>
-            <Text style={mode === 'lost' ? styles.chipTextActive : styles.chipText}>Lost</Text>
+            <Text style={mode === 'lost' ? styles.chipTextActive : styles.chipText}>{t('lost')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMode('found')} activeOpacity={0.9} style={[styles.chip, mode === 'found' && styles.chipActive]}>
-            <Text style={mode === 'found' ? styles.chipTextActive : styles.chipText}>Found</Text>
+            <Text style={mode === 'found' ? styles.chipTextActive : styles.chipText}>{t('found')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -237,7 +234,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
           <View style={styles.round40}><Text style={styles.round40Text}>{mode === 'lost' ? '🪔' : '🧿'}</Text></View>
           <TextInput
             style={[styles.searchInput, {flex: 1, color: '#7C2D12'}]}
-            placeholder={mode === 'lost' ? 'Search lost reports...' : 'Search found reports...'}
+            placeholder={mode === 'lost' ? t('searchLostReports') : t('searchFoundReports')}
             placeholderTextColor="#9A3412"
             value={searchText}
             onChangeText={(text) => {
@@ -260,25 +257,25 @@ export const Lost = ({goHome, navigation: navProp}) => {
 
       {/* Form */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{mode === 'lost' ? 'Add Lost Details' : 'Add Found Details'}</Text>
+        <Text style={styles.sectionTitle}>{mode === 'lost' ? t('addLostDetails') : t('addFoundDetails')}</Text>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>{mode === 'lost' ? 'What is lost?' : 'What is found?'}</Text>
-          <TextInput placeholder={mode === 'lost' ? 'E.g., Wallet, Person name' : 'E.g., Bag, ID card'} placeholderTextColor="#9A3412" value={title} onChangeText={setTitle} style={styles.textInput} />
+          <Text style={styles.inputLabel}>{mode === 'lost' ? t('whatIsLost') : t('whatIsFound')}</Text>
+          <TextInput placeholder={mode === 'lost' ? t('egWalletPerson') : t('egBagIdCard')} placeholderTextColor="#9A3412" value={title} onChangeText={setTitle} style={styles.textInput} />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>Description</Text>
-          <TextInput placeholder="Short description" placeholderTextColor="#9A3412" value={desc} onChangeText={setDesc} style={styles.textInput} />
+          <Text style={styles.inputLabel}>{t('description')}</Text>
+          <TextInput placeholder={t('shortDescription')} placeholderTextColor="#9A3412" value={desc} onChangeText={setDesc} style={styles.textInput} />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>{mode === 'lost' ? 'Where lost' : 'Where found'}</Text>
-          <TextInput placeholder={mode === 'lost' ? 'Location or landmark' : 'Location or landmark'} placeholderTextColor="#9A3412" value={place} onChangeText={setPlace} style={styles.textInput} />
+          <Text style={styles.inputLabel}>{mode === 'lost' ? t('whereLost') : t('whereFound')}</Text>
+          <TextInput placeholder={t('locationOrLandmark')} placeholderTextColor="#9A3412" value={place} onChangeText={setPlace} style={styles.textInput} />
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>Date & time</Text>
+          <Text style={styles.inputLabel}>{t('dateAndTime')}</Text>
           <View style={{flexDirection: 'row', gap: 8}}>
             <TouchableOpacity 
               onPress={() => {
@@ -293,7 +290,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric'
-                }) : 'Select date'}
+                }) : t('selectDate')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -309,7 +306,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: true
-                }) : 'Select time'}
+                }) : t('selectTime')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -349,9 +346,9 @@ export const Lost = ({goHome, navigation: navProp}) => {
         </View>
 
         <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>Contact Phone *</Text>
+          <Text style={styles.inputLabel}>{t('contactPhoneRequired')}</Text>
           <TextInput 
-            placeholder="Your contact phone number" 
+            placeholder={t('yourContactPhone')} 
             placeholderTextColor="#9A3412" 
             value={contact} 
             onChangeText={setContact} 
@@ -360,7 +357,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
           />
         </View>
 
-        <Text style={[styles.inputLabel, {marginTop: 6}]}>Photos</Text>
+        <Text style={[styles.inputLabel, {marginTop: 6}]}>{t('photos')}</Text>
         <View style={{flexDirection: 'row', gap: 8, marginBottom: 8}}>
           <TouchableOpacity onPress={handleAddFromCamera} activeOpacity={0.9}>
             <View style={styles.round64Light}><Text style={styles.round64Text}>📷</Text></View>
@@ -385,7 +382,7 @@ export const Lost = ({goHome, navigation: navProp}) => {
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.primaryBtnText}>{mode === 'lost' ? 'Submit Lost Report' : 'Submit Found Report'}</Text>
+            <Text style={styles.primaryBtnText}>{mode === 'lost' ? t('submitLostReport') : t('submitFoundReport')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -395,8 +392,8 @@ export const Lost = ({goHome, navigation: navProp}) => {
         <View style={styles.cardRow}>
           <Text style={styles.sectionTitle}>
             {searchText.trim() 
-              ? `Search Results (${recentReports.length})` 
-              : mode === 'lost' ? 'Recent Lost Reports' : 'Recent Found Reports'}
+              ? `${t('searchResults')} (${recentReports.length})` 
+              : mode === 'lost' ? t('recentLostReports') : t('recentFoundReports')}
           </Text>
           {loadingReports && <ActivityIndicator size="small" color="#F59E0B" />}
         </View>
@@ -404,12 +401,12 @@ export const Lost = ({goHome, navigation: navProp}) => {
         {loadingReports && recentReports.length === 0 ? (
           <View style={{padding: 20, alignItems: 'center'}}>
             <ActivityIndicator size="large" color="#F59E0B" />
-            <Text style={[styles.rowSubtitle, {marginTop: 10}]}>Loading reports...</Text>
+            <Text style={[styles.rowSubtitle, {marginTop: 10}]}>{t('loadingReports')}</Text>
           </View>
         ) : recentReports.length === 0 ? (
           <View style={{padding: 20, alignItems: 'center'}}>
             <Text style={[styles.rowSubtitle, {textAlign: 'center'}]}>
-              No {mode === 'lost' ? 'lost' : 'found'} reports yet.{'\n'}Be the first to submit one!
+              {mode === 'lost' ? t('noLostReportsYet') : t('noFoundReportsYet')}{'\n'}{t('beFirstToSubmit')}
             </Text>
           </View>
         ) : (
@@ -441,23 +438,23 @@ export const Lost = ({goHome, navigation: navProp}) => {
                     navigation.navigate('LostFoundDetails', { item });
                   } else {
                     console.error('Navigation not available or navigate method missing');
-                    Alert.alert('Error', 'Navigation not available. Please try again.');
+                    Alert.alert(t('error'), t('navigationNotAvailable'));
                   }
                 } catch (error) {
                   console.error('Navigation error:', error);
-                  Alert.alert('Error', 'Failed to navigate. Error: ' + error.message);
+                  Alert.alert(t('error'), t('failedToSubmitReport') + ': ' + error.message);
                 }
               }}
             >
               <View style={{flex: 1, marginRight: 12}}>
                 <Text style={[styles.rowTitle, {marginBottom: 4}]}>
-                  {item.itemName || 'Unknown Item'}
+                  {item.itemName || t('unknownItem')}
                 </Text>
                 <Text 
                   style={[styles.rowSubtitle, {marginBottom: 6}]} 
                   numberOfLines={2}
                 >
-                  {item.description || 'No description'}
+                  {item.description || t('noDescription')}
                 </Text>
                 <View style={{flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap'}}>
                   <Text style={[styles.rowSubtitle, {fontSize: 11, color: '#6B7280'}]}>

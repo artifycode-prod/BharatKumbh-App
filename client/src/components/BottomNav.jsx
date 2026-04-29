@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { styles } from '../styles/styles';
 
@@ -79,6 +78,7 @@ export const BottomNav = ({active, onChange}) => {
             active={active}
             onChange={onChange}
           />
+          {/* About Us removed from bottom nav for Pilgrim view */}
         </View>
       </View>
     </View>

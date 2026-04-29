@@ -1,92 +1,87 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
+
+let pool = null;
 
 const connectDB = async (retryCount = 0) => {
   const maxRetries = 3;
-  const retryDelay = 5000; // 5 seconds
-  
+  const retryDelay = 5000;
+
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URI;
+
+  if (!connectionString) {
+    console.warn('⚠️ DATABASE_URL or POSTGRES_URI not set - database features will not work');
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      console.error('❌ Production requires database connection. Exiting...');
+      process.exit(1);
+    }
+    return null;
+  }
+
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bharatkumbh';
-    console.log(`Attempting to connect to MongoDB... (Attempt ${retryCount + 1}/${maxRetries + 1})`);
-    console.log(`Connection string: ${mongoURI.replace(/:[^:@]+@/, ':****@')}`); // Hide password in logs
-    
-    // Connection options for better reliability
-    const options = {
-      serverSelectionTimeoutMS: 15000, // 15 seconds timeout (increased)
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 15000,
-      retryWrites: true,
-      w: 'majority',
-      // Remove family: 4 to allow both IPv4 and IPv6
-    };
-    
-    const conn = await mongoose.connect(mongoURI, options);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    
-    // Set up connection event handlers
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err.message);
+    console.log(`Attempting to connect to PostgreSQL... (Attempt ${retryCount + 1}/${maxRetries + 1})`);
+    const safeUrl = connectionString.replace(/:[^:@]+@/, ':****@');
+    console.log(`Connection string: ${safeUrl}`);
+
+    const useSSL = connectionString.includes('neon.tech') || connectionString.includes('supabase') || connectionString.includes('sslmode=require');
+    pool = new Pool({
+      connectionString,
+      ssl: useSSL ? { rejectUnauthorized: connectionString.includes('neon.tech') } : false,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+
+    // Test connection
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+
+    console.log('✅ PostgreSQL Connected successfully');
+
+    pool.on('error', (err) => {
+      console.error('❌ PostgreSQL pool error:', err.message);
     });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
-    });
-    
-    return conn;
+
+    return pool;
   } catch (error) {
-    // Retry logic for DNS/network errors
-    if ((error.message.includes('querySrv EREFUSED') || 
-         error.message.includes('ENOTFOUND') ||
-         error.message.includes('ETIMEDOUT')) && 
-        retryCount < maxRetries) {
-      console.error(`❌ Connection attempt ${retryCount + 1} failed: ${error.message}`);
+    if (retryCount < maxRetries && (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT')) {
+      console.error(`❌ Connection attempt ${retryCount + 1} failed:`, error.message);
       console.log(`⏳ Retrying in ${retryDelay / 1000} seconds...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
       return connectDB(retryCount + 1);
     }
-    console.error('❌ MongoDB connection error:', error.message);
-    
-    // Provide specific guidance based on error type
-    if (error.message.includes('querySrv EREFUSED') || error.message.includes('ENOTFOUND')) {
-      console.error('\n🔍 DNS/Network Error Detected:');
-      console.error('   This usually means:');
-      console.error('   1. ⚠️  MongoDB Atlas cluster is PAUSED (most common)');
-      console.error('      → Go to: https://cloud.mongodb.com → Database → Resume cluster');
-      console.error('   2. ⚠️  IP address not whitelisted');
-      console.error('      → Go to: MongoDB Atlas → Network Access → Add 0.0.0.0/0');
-      console.error('   3. ⚠️  DNS resolution issue');
-      console.error('      → Check internet connection and firewall');
-    } else if (error.message.includes('authentication failed')) {
-      console.error('\n🔐 Authentication Error:');
-      console.error('   → Check username and password in .env file');
-    } else {
-      console.error('\n💡 Please check:');
-      console.error('   1. MONGODB_URI in .env file is correct');
-      console.error('   2. MongoDB Atlas IP whitelist includes your IP (0.0.0.0/0 for development)');
-      console.error('   3. Username and password are correct');
-      console.error('   4. Network connection is active');
-      console.error('   5. MongoDB Atlas cluster is running (not paused)');
-    }
-    
-    // On Vercel/serverless, don't exit - let the function continue
-    // The API will work but database operations will fail gracefully
+
+    console.error('❌ PostgreSQL connection error:', error.message);
+    console.error('\n💡 Please check:');
+    console.error('   1. DATABASE_URL or POSTGRES_URI in .env is correct');
+    console.error('   2. Database is accessible (Neon: check project is active)');
+    console.error('   3. Run schema.sql to create tables: psql $DATABASE_URL -f db/schema.sql');
+
     if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
-      console.error('\n❌ Production mode requires MongoDB connection. Exiting...');
+      console.error('\n❌ Production requires database connection. Exiting...');
       process.exit(1);
     } else {
-      console.warn('\n⚠️  Server will continue but database features will not work.');
-      console.warn('⚠️  API endpoints will return errors until MongoDB is connected.');
-      console.warn('\n📝 Quick Fix Steps:');
-      console.warn('   1. Check MongoDB Atlas → Database → Is cluster running? (Resume if paused)');
-      console.warn('   2. Check MongoDB Atlas → Network Access → Add 0.0.0.0/0');
-      console.warn('   3. Verify MONGODB_URI environment variable is set correctly');
-      console.warn('   4. Redeploy after fixing');
+      console.warn('\n⚠️ Server will continue but database features will not work.');
     }
+    return null;
   }
 };
 
-module.exports = connectDB;
+const getPool = () => pool;
 
+const query = async (text, params) => {
+  if (!pool) {
+    const p = await connectDB();
+    if (!p) throw new Error('Database not connected');
+  }
+  return pool.query(text, params);
+};
+
+const isConnected = () => {
+  return pool !== null;
+};
+
+module.exports = connectDB;
+module.exports.getPool = getPool;
+module.exports.query = query;
+module.exports.isConnected = isConnected;

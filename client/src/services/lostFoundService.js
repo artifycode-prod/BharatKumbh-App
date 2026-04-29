@@ -11,7 +11,7 @@ import api from './api';
 export const reportItem = async (data) => {
   try {
     console.log('📤 Reporting item:', { type: data.type, itemName: data.itemName });
-    const response = await api.post('/api/lost-found', data);
+    const response = await api.post('/lost-found', data);
     console.log('✅ Report response:', response.data);
     
     // Handle different response formats
@@ -42,7 +42,7 @@ export const reportItem = async (data) => {
 export const getAllItems = async () => {
   try {
     console.log('📤 Fetching all items');
-    const response = await api.get('/api/lost-found');
+    const response = await api.get('/lost-found');
     console.log('✅ Get items response:', response.data);
     
     // Handle different response formats
@@ -71,7 +71,7 @@ export const getAllItems = async () => {
 export const getMyReports = async () => {
   try {
     console.log('📤 Fetching my reports');
-    const response = await api.get('/api/lost-found/my-reports');
+    const response = await api.get('/lost-found/my-reports');
     console.log('✅ Get my reports response:', response.data);
     
     // Handle different response formats
@@ -100,7 +100,7 @@ export const getMyReports = async () => {
 export const matchItems = async (lostId, foundId) => {
   try {
     console.log('📤 Matching items:', { lostId, foundId });
-    const response = await api.put(`/api/lost-found/${lostId}/match`, {
+    const response = await api.put(`/lost-found/${lostId}/match`, {
       matchedWithId: foundId,
     });
     console.log('✅ Match response:', response.data);

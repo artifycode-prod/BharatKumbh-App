@@ -7,7 +7,7 @@ import { styles } from '../styles/styles';
 export const Header = ({title, icon, accent, onBack}) => {
   const { t } = useLanguage();
   // Common translation keys that might be used as titles
-  const translationKeys = ['navigation', 'medical', 'lostFound', 'qrCheckin', 'sos', 'profile', 'home', 'chatbot'];
+  const translationKeys = ['navigation', 'medical', 'lostFound', 'qrCheckin', 'sos', 'profile', 'home', 'chatbot', 'divineAssistant'];
   // If title is a translation key, translate it; otherwise use as-is
   const displayTitle = title && translationKeys.includes(title) ? t(title) : title;
   

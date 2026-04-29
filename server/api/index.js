@@ -58,33 +58,25 @@ app.use((req, res, next) => {
 let dbConnected = false;
 let connectionAttempted = false;
 
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URI;
+
 const attemptConnection = async () => {
-  if (connectionAttempted && dbConnected) {
-    return; // Already connected
-  }
-  
-  if (!process.env.MONGODB_URI) {
-    console.warn('⚠️ MONGODB_URI not set - database features will not work');
+  if (dbConnected) return;
+  if (!connectionString) {
+    console.warn('⚠️ DATABASE_URL or POSTGRES_URI not set - database features will not work');
     return;
   }
-  
   if (!connectionAttempted) {
     connectionAttempted = true;
     try {
-      console.log('🔄 Attempting MongoDB connection...');
-      console.log('🔗 Connection string:', process.env.MONGODB_URI.replace(/:[^:@]+@/, ':****@'));
-      await connectDB();
-      dbConnected = true;
-      console.log('✅ Database connection established');
+      console.log('🔄 Attempting PostgreSQL connection...');
+      const p = await connectDB();
+      dbConnected = p !== null;
+      if (dbConnected) console.log('✅ Database connection established');
     } catch (err) {
       console.error('❌ Database connection failed:', err.message);
-      console.error('❌ Error details:', {
-        name: err.name,
-        code: err.code,
-        message: err.message
-      });
       dbConnected = false;
-      connectionAttempted = false; // Allow retry
+      connectionAttempted = false;
     }
   }
 };
@@ -92,37 +84,25 @@ const attemptConnection = async () => {
 // Attempt initial connection
 attemptConnection();
 
-// Middleware to ensure DB connection before database operations
+// Middleware to ensure DB connection before database operations (Vercel serverless cold start)
+const { isConnected } = require('../config/database');
+const ensureDb = async (req, res, next) => {
+  if (!isConnected() && connectionString) await attemptConnection();
+  next();
+};
+app.use('/api/users', ensureDb);
+app.use('/api/auth', ensureDb);
+app.use('/api/admin', ensureDb);
 app.use('/api/lost-found', async (req, res, next) => {
-  if (req.method === 'POST' || req.method === 'GET') {
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.log('🔄 DB not connected, attempting connection...');
-      await attemptConnection();
-    }
-  }
+  if ((req.method === 'POST' || req.method === 'GET') && !isConnected()) await attemptConnection();
   next();
 });
-
 app.use('/api/medical', async (req, res, next) => {
-  if (req.method === 'POST' || req.method === 'GET') {
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.log('🔄 DB not connected, attempting connection...');
-      await attemptConnection();
-    }
-  }
+  if ((req.method === 'POST' || req.method === 'GET') && !isConnected()) await attemptConnection();
   next();
 });
-
 app.use('/api/qr', async (req, res, next) => {
-  if (req.method === 'POST') {
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.log('🔄 DB not connected, attempting connection...');
-      await attemptConnection();
-    }
-  }
+  if (req.method === 'POST' && !isConnected()) await attemptConnection();
   next();
 });
 
@@ -139,45 +119,21 @@ app.use('/api/qr', qrRoutes);
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    const mongoose = require('mongoose');
-    const dbState = mongoose.connection.readyState;
-    const dbStatus = dbState === 1 ? 'connected' : dbState === 2 ? 'connecting' : 'disconnected';
-    
-    // If disconnected and MONGODB_URI is set, try to connect
-    if (dbStatus === 'disconnected' && process.env.MONGODB_URI) {
-      console.log('🔄 Health check: MongoDB disconnected, attempting connection...');
+    if (!isConnected() && connectionString) {
       await attemptConnection();
-      const newState = mongoose.connection.readyState;
-      const newStatus = newState === 1 ? 'connected' : newState === 2 ? 'connecting' : 'disconnected';
-      
-      res.json({
-        status: 'OK',
-        message: 'Bharat Kumbh Backend API is running',
-        timestamp: new Date().toISOString(),
-        mongodb: newStatus,
-        platform: 'Vercel',
-        env: {
-          hasMongoURI: !!process.env.MONGODB_URI,
-          hasJWTSecret: !!process.env.JWT_SECRET,
-          nodeEnv: process.env.NODE_ENV || 'not set',
-          mongoURIFormat: process.env.MONGODB_URI ? 'correct' : 'missing'
-        },
-        connectionAttempt: 'attempted'
-      });
-    } else {
-      res.json({
-        status: 'OK',
-        message: 'Bharat Kumbh Backend API is running',
-        timestamp: new Date().toISOString(),
-        mongodb: dbStatus,
-        platform: 'Vercel',
-        env: {
-          hasMongoURI: !!process.env.MONGODB_URI,
-          hasJWTSecret: !!process.env.JWT_SECRET,
-          nodeEnv: process.env.NODE_ENV || 'not set'
-        }
-      });
     }
+    res.json({
+      status: 'OK',
+      message: 'Bharat Kumbh Backend API is running',
+      timestamp: new Date().toISOString(),
+      database: isConnected() ? 'connected' : 'disconnected',
+      platform: 'Vercel',
+      env: {
+        hasDatabaseUrl: !!(process.env.DATABASE_URL || process.env.POSTGRES_URI),
+        hasJWTSecret: !!process.env.JWT_SECRET,
+        nodeEnv: process.env.NODE_ENV || 'not set'
+      }
+    });
   } catch (error) {
     res.status(500).json({
       status: 'ERROR',
@@ -215,7 +171,7 @@ app.post('/api/test-login', (req, res) => {
     },
     env: {
       hasJWTSecret: !!process.env.JWT_SECRET,
-      hasMongoURI: !!process.env.MONGODB_URI,
+      hasDatabaseUrl: !!(process.env.DATABASE_URL || process.env.POSTGRES_URI),
       nodeEnv: process.env.NODE_ENV
     }
   });
@@ -242,9 +198,11 @@ app.get('/', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log('❌ 404 - Route not found:', req.method, req.path, req.originalUrl);
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
+    received: { method: req.method, path: req.path, url: req.originalUrl }
   });
 });
 

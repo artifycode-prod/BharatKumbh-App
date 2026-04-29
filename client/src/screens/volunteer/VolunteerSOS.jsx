@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 import { getAllSOS, acknowledgeSOS, resolveSOS } from '../../services/sosService';
 
 export const VolunteerSOS = ({goHome}) => {
+  const { t } = useLanguage();
   const [sosAlerts, setSosAlerts] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,7 @@ export const VolunteerSOS = ({goHome}) => {
       setSosAlerts(alerts);
     } catch (error) {
       console.error('Error loading SOS alerts:', error);
-      Alert.alert('Error', 'Failed to load SOS alerts');
+      Alert.alert(t('error'), t('failedToLoadSOS'));
     } finally {
       setLoading(false);
       setRefreshing(false);

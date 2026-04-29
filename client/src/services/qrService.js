@@ -16,7 +16,7 @@ export const registerQR = async (data) => {
       groupSize: data.groupSize 
     });
     
-    const response = await api.post('/api/qr/register', data);
+    const response = await api.post('/qr/register', data);
     console.log('✅ QR registration response:', response.data);
     
     // Handle different response formats
@@ -43,7 +43,7 @@ export const registerQR = async (data) => {
 export const getCrowdStatus = async (destination) => {
   try {
     console.log('📤 Getting crowd status for:', destination);
-    const response = await api.get(`/api/qr/destinations/${destination}/crowd-status`);
+    const response = await api.get(`/qr/destinations/${destination}/crowd-status`);
     console.log('✅ Crowd status response:', response.data);
     
     return {
@@ -70,7 +70,7 @@ export const getCrowdStatus = async (destination) => {
 export const getAllRegistrations = async (page = 1, limit = 20) => {
   try {
     console.log('📤 Getting registrations:', { page, limit });
-    const response = await api.get('/api/qr/registrations', {
+    const response = await api.get('/qr/registrations', {
       params: { page, limit }
     });
     console.log('✅ Get registrations response:', response.data);

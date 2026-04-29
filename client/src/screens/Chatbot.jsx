@@ -1,14 +1,19 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
+import { LANGUAGES } from '../services/languageService';
 import { styles } from '../styles/styles';
 
 export const Chatbot = ({goHome}) => {
-  const [language, setLanguage] = React.useState('English');
-  const [messages, setMessages] = React.useState([
-    {from: 'bot', text: "Namaste! I'm your divine assistant. How can I help you today at Kumbh Mela?"},
-  ]);
+  const { t, currentLanguage, translations } = useLanguage();
+  const langKey = [LANGUAGES.ENGLISH, LANGUAGES.HINDI, LANGUAGES.MARATHI].includes(currentLanguage) ? currentLanguage : LANGUAGES.ENGLISH;
+  const [messages, setMessages] = React.useState([]);
+
+  React.useEffect(() => {
+    const welcomeText = translations?.selectQuestionBelow || t('selectQuestionBelow');
+    setMessages([{ from: 'bot', text: welcomeText }]);
+  }, [currentLanguage, translations]);
 
   const scrollRef = React.useRef(null);
   const messagesRef = React.useRef(null);
@@ -77,11 +82,11 @@ export const Chatbot = ({goHome}) => {
     }, 250);
   };
 
-  const langs = ['English', 'हिंदी', 'मराठी'];
-
   React.useEffect(() => {
     messagesRef.current?.scrollToEnd({animated: true});
   }, [messages.length]);
+
+  const suggestionList = suggestions[langKey] || suggestions[LANGUAGES.ENGLISH];
 
   return (
     <View style={{flex: 1, backgroundColor: '#FFF7ED'}}>
@@ -90,55 +95,6 @@ export const Chatbot = ({goHome}) => {
         contentContainerStyle={[styles.screenPad, {paddingBottom: 40}]}
         showsVerticalScrollIndicator={false}
       > 
-        <Header title="Divine Assistant" icon="🪷" onBack={goHome} />
-
-        {/* Language Selector - Enhanced */}
-        <View style={styles.card}>
-          <Text style={[styles.sectionTitle, {marginBottom: 12}]}>
-            {language === 'English' ? 'Select Language' : language === 'हिंदी' ? 'भाषा चुनें' : 'भाषा निवडा'}
-          </Text>
-          <View style={{flexDirection: 'row', gap: 10, flexWrap: 'wrap'}}>
-            {langs.map((l) => (
-              <TouchableOpacity 
-                key={l} 
-                onPress={() => setLanguage(l)} 
-                activeOpacity={0.7}
-                style={{flex: 1, minWidth: '30%'}}
-              >
-                {language === l ? (
-                  <LinearGradient 
-                    colors={['#FB923C', '#F97316']} 
-                    style={{
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 20,
-                      alignItems: 'center',
-                      shadowColor: '#FB923C',
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      shadowOffset: {width: 0, height: 4},
-                      elevation: 4,
-                    }}
-                  >
-                    <Text style={{color: 'white', fontSize: 14, fontWeight: '700'}}>{l}</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={{
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 20,
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    borderWidth: 2,
-                    borderColor: 'rgba(251,146,60,0.3)',
-                    alignItems: 'center',
-                  }}>
-                    <Text style={{color: '#9A3412', fontSize: 14, fontWeight: '600'}}>{l}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {/* Chat Box - Enhanced */}
         <View style={[styles.chatBox, {
@@ -214,15 +170,15 @@ export const Chatbot = ({goHome}) => {
           </ScrollView>
         </View>
 
-        {/* Quick suggestions - Enhanced */}
+        {/* Quick suggestions - uses app language */}
         <View style={[styles.card, {marginBottom: 24, paddingBottom: 8}]}>
           <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 12}}>
             <Text style={[styles.sectionTitle, {marginBottom: 0, flex: 1}]}>
-              {language === 'English' ? '💡 Quick Questions' : language === 'हिंदी' ? '💡 त्वरित प्रश्न' : '💡 झटपट प्रश्न'}
+              💡 {t('quickQuestions')}
             </Text>
           </View>
           <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 10}}>
-            {suggestions[language].map((s, i) => (
+            {suggestionList.map((s, i) => (
               <TouchableOpacity 
                 key={i} 
                 onPress={() => pickSuggestion(s)} 

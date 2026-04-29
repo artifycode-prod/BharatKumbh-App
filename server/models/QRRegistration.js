@@ -1,90 +1,22 @@
-const mongoose = require('mongoose');
+// QRRegistration model - PostgreSQL backend
+const db = require('../db/qrRegistrations');
 
-const qrRegistrationSchema = new mongoose.Schema({
-  qrCodeId: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  entryPoint: {
-    type: String,
-    required: true,
-    enum: ['railway_station', 'bus_stand', 'parking_area', 'other'],
-    trim: true
-  },
-  entryPointName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  registeredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
-  groupSize: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 50
-  },
-  luggageCount: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 20
-  },
-  intendedDestination: {
-    type: String,
-    required: true,
-    enum: ['Tapovan', 'Panchvati', 'Trambak', 'Ramkund', 'Kalaram', 'Sita Gufa', 'Other'],
-    trim: true
-  },
-  customDestination: {
-    type: String,
-    trim: true
-  },
-  groupSelfie: {
-    type: String, // URL or file path
-    required: true
-  },
-  location: {
-    latitude: {
-      type: Number,
-      required: true
-    },
-    longitude: {
-      type: Number,
-      required: true
-    },
-    address: {
-      type: String,
-      default: ''
+const QRRegistration = {
+  create: async (data) => db.create(data),
+  findById: async (id) => db.findById(id),
+  find: async (filter, options) => db.find(filter, options),
+  countDocuments: async (filter) => db.countDocuments(filter),
+  aggregate: async (pipeline) => {
+    // MongoDB-style aggregate for analytics
+    const matchStage = pipeline.find((p) => p.$match);
+    const filter = {};
+    if (matchStage?.$match) {
+      if (matchStage.$match.intendedDestination) filter.intendedDestination = matchStage.$match.intendedDestination;
+      if (matchStage.$match.registeredAt?.$gte) filter.registeredAtGte = matchStage.$match.registeredAt.$gte;
+      if (matchStage.$match.registeredAt?.$lte) filter.registeredAtLte = matchStage.$match.registeredAt.$lte;
     }
+    return db.aggregateByDestination(filter);
   },
-  contactInfo: {
-    phone: {
-      type: String,
-      required: true
-    },
-    name: {
-      type: String,
-      default: ''
-    }
-  },
-  registeredAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
+};
 
-// Index for faster queries
-qrRegistrationSchema.index({ qrCodeId: 1, registeredAt: -1 });
-qrRegistrationSchema.index({ intendedDestination: 1, registeredAt: -1 });
-qrRegistrationSchema.index({ location: '2dsphere' });
-
-module.exports = mongoose.model('QRRegistration', qrRegistrationSchema);
-
-
+module.exports = QRRegistration;

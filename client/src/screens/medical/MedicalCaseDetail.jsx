@@ -1,18 +1,20 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View, Linking, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Header } from '../../components/Header';
 import { styles } from '../../styles/styles';
 
 export const MedicalCaseDetail = ({ navigation, route }) => {
+  const { t } = useLanguage();
   const { caseData } = route.params || {};
 
   if (!caseData) {
     return (
       <View style={styles.container}>
-        <Header title="Case Details" icon="🚑" accent="red" onBack={() => navigation.goBack()} />
+        <Header title={t('caseDetails')} icon="🚑" accent="red" onBack={() => navigation.goBack()} />
         <View style={styles.card}>
-          <Text style={styles.rowSubtitle}>Case data not found</Text>
+          <Text style={styles.rowSubtitle}>{t('caseDataNotFound')}</Text>
         </View>
       </View>
     );
@@ -60,7 +62,7 @@ export const MedicalCaseDetail = ({ navigation, route }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.screenPad}>
-      <Header title="Case Details" icon="🚑" accent="red" onBack={() => navigation.goBack()} />
+      <Header title={t('caseDetails')} icon="🚑" accent="red" onBack={() => navigation.goBack()} />
 
       {/* Patient Info Card */}
       <View style={styles.card}>
@@ -69,9 +71,9 @@ export const MedicalCaseDetail = ({ navigation, route }) => {
             <Text style={styles.brandEmoji}>🚑</Text>
           </LinearGradient>
           <View style={{flex: 1}}>
-            <Text style={styles.brandTitle}>{caseData.patientName || 'Unknown Patient'}</Text>
+            <Text style={styles.brandTitle}>{caseData.patientName || t('unknownPatient')}</Text>
             <Text style={styles.brandSubtitle}>
-              {caseData.patientAge ? `Age: ${caseData.patientAge}` : 'Age not specified'}
+              {caseData.patientAge ? `${t('ageLabel')}: ${caseData.patientAge}` : t('ageNotSpecified')}
               {caseData.patientGender ? ` • ${caseData.patientGender}` : ''}
             </Text>
           </View>

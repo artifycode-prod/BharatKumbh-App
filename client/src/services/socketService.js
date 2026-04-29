@@ -16,7 +16,7 @@ export const initSocket = (token) => {
     return socket;
   }
 
-  socket = io(API_CONFIG.BASE_URL, {
+  socket = io(API_CONFIG.SERVER_ROOT, {
     transports: ['websocket'],
     reconnection: true,
     reconnectionDelay: 1000,

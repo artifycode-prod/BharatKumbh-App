@@ -2,15 +2,24 @@ import React from 'react';
 import { Dimensions, Image, Platform, ScrollView, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Header } from '../components/Header';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const AttractionDetail = ({route, navigation}) => {
+  const { t } = useLanguage();
   const {attraction} = route.params || {};
   const screenWidth = Dimensions.get('window').width;
+
+  // Get translated text by attraction id (language-aware)
+  const id = attraction?.id;
+  const displayName = id ? (t(`attraction${id}Name`) || attraction.name) : attraction?.name;
+  const displayTag = id ? (t(`attraction${id}Tag`) || attraction.tag) : attraction?.tag;
+  const displayInfo = id ? (t(`attraction${id}Info`) || attraction.info) : attraction?.info;
+  const displayDescription = id ? (t(`attraction${id}Description`) || attraction.info) : attraction?.info;
 
   if (!attraction) {
     return (
       <View style={{flex: 1, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center'}}>
-        <Text style={{color: '#7C2D12', fontSize: 16}}>Attraction not found</Text>
+        <Text style={{color: '#7C2D12', fontSize: 16}}>{t('attractionNotFound')}</Text>
       </View>
     );
   }
@@ -24,7 +33,7 @@ export const AttractionDetail = ({route, navigation}) => {
         backgroundColor: '#FFF7ED',
       }}>
         <Header 
-          title={attraction.name} 
+          title={displayName} 
           icon="🛕" 
           onBack={() => navigation.goBack()} 
         />
@@ -73,7 +82,7 @@ export const AttractionDetail = ({route, navigation}) => {
             shadowRadius: 4,
             elevation: 5,
           }}>
-            <Text style={{color: 'white', fontSize: 12, fontWeight: '700'}}>{attraction.tag}</Text>
+            <Text style={{color: 'white', fontSize: 12, fontWeight: '700'}}>{displayTag}</Text>
           </View>
         </View>
 
@@ -88,7 +97,7 @@ export const AttractionDetail = ({route, navigation}) => {
             letterSpacing: 0.3,
             lineHeight: 34,
           }}>
-            {attraction.name}
+            {displayName}
           </Text>
 
           {/* Distance */}
@@ -105,7 +114,7 @@ export const AttractionDetail = ({route, navigation}) => {
             borderColor: 'rgba(255,107,53,0.2)',
           }}>
             <Text style={{fontSize: 18, marginRight: 10}}>📍</Text>
-            <Text style={{color: '#7C2D12', fontSize: 15, fontWeight: '700'}}>{attraction.distance} from Nashik</Text>
+            <Text style={{color: '#7C2D12', fontSize: 15, fontWeight: '700'}}>{attraction.distance} {t('fromNashik')}</Text>
           </View>
 
           {/* Description */}
@@ -129,10 +138,10 @@ export const AttractionDetail = ({route, navigation}) => {
               marginBottom: 16,
               fontWeight: '500',
             }}>
-              {attraction.info}
+              {displayInfo}
             </Text>
             
-            {/* Additional Information */}
+            {/* Additional Information - full description */}
             <View style={{
               borderTopWidth: 1,
               borderTopColor: '#F3F4F6',
@@ -145,16 +154,14 @@ export const AttractionDetail = ({route, navigation}) => {
                 color: '#7C2D12',
                 marginBottom: 8,
               }}>
-                About this Place
+                {t('aboutThisPlace')}
               </Text>
               <Text style={{
                 fontSize: 13,
                 color: '#6B7280',
                 lineHeight: 20,
               }}>
-                {attraction.name} is one of the most significant spiritual destinations in Nashik. 
-                This sacred site holds immense importance for devotees visiting during the Maha Kumbh Mela. 
-                Experience the divine atmosphere and connect with the rich cultural heritage of this holy place.
+                {displayDescription}
               </Text>
             </View>
           </View>
@@ -179,7 +186,7 @@ export const AttractionDetail = ({route, navigation}) => {
               color: '#7C2D12',
               marginBottom: 16,
             }}>
-              Visiting Information
+              {t('visitingInformation')}
             </Text>
             <View style={{gap: 16}}>
               <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
@@ -195,8 +202,8 @@ export const AttractionDetail = ({route, navigation}) => {
                   <Text style={{fontSize: 20}}>🕐</Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>Timings</Text>
-                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>Open 24 hours during Kumbh Mela</Text>
+                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>{t('timings')}</Text>
+                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>{t('open24Hours')}</Text>
                 </View>
               </View>
               <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
@@ -212,8 +219,8 @@ export const AttractionDetail = ({route, navigation}) => {
                   <Text style={{fontSize: 20}}>🚗</Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>Transport</Text>
-                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>Shuttle service available from main ghat</Text>
+                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>{t('transport')}</Text>
+                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>{t('shuttleServiceAvailable')}</Text>
                 </View>
               </View>
               <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
@@ -229,8 +236,8 @@ export const AttractionDetail = ({route, navigation}) => {
                   <Text style={{fontSize: 20}}>👥</Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>Best Time</Text>
-                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>Early morning or evening for peaceful darshan</Text>
+                  <Text style={{color: '#374151', fontSize: 14, fontWeight: '700', marginBottom: 4}}>{t('bestTime')}</Text>
+                  <Text style={{color: '#6B7280', fontSize: 13, lineHeight: 20}}>{t('bestTimeForDarshan')}</Text>
                 </View>
               </View>
             </View>
